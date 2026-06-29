@@ -16,15 +16,14 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@prisma/client": "^7.8.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "prisma": "^7.8.0",
     "socket.io": "^4.8.3",
     "zod": "^4.4.3",
-    "@buzo/db": "*"
+    "@buzo/db": "workspace:*",
+    "@buzo/env": "workspace:*"
   }
 }

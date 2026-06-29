@@ -38,14 +38,13 @@
     "apps/api": {
       "name": "api",
       "dependencies": {
-        "@buzo/db": "*",
-        "@prisma/client": "^7.8.0",
+        "@buzo/db": "workspace:*",
+        "@buzo/env": "workspace:*",
         "bcrypt": "^6.0.0",
         "cors": "^2.8.6",
         "dotenv": "^17.4.2",
         "express": "^5.2.1",
         "jsonwebtoken": "^9.0.3",
-        "prisma": "^7.8.0",
         "socket.io": "^4.8.3",
         "zod": "^4.4.3",
       },
@@ -163,6 +162,7 @@
     "packages/db": {
       "name": "@buzo/db",
       "dependencies": {
+        "@buzo/env": "workspace:*",
         "@prisma/adapter-pg": "^7.8.0",
         "@prisma/client": "^7.8.0",
         "pg": "^8.22.0",
@@ -178,7 +178,11 @@
       },
     },
     "packages/env": {
-      "name": "env",
+      "name": "@buzo/env",
+      "dependencies": {
+        "dotenv": "^17.4.2",
+        "zod": "^4.4.3",
+      },
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -255,6 +259,8 @@
   },
   "packages": {
     "@buzo/db": ["@buzo/db@workspace:packages/db"],
+
+    "@buzo/env": ["@buzo/env@workspace:packages/env"],
 
     "@electric-sql/pglite": ["@electric-sql/pglite@0.4.1", "", {}, "sha512-mZ9NzzUSYPOCnxHH1oAHPRzoMFJHY472raDKwXl/+6oPbpdJ7g8LsCN4FSaIIfkiCKHhb3iF/Zqo3NYxaIhU7Q=="],
 
@@ -765,8 +771,6 @@
     "engine.io-client": ["engine.io-client@6.6.6", "", { "dependencies": { "@socket.io/component-emitter": "~3.1.0", "debug": "~4.4.1", "engine.io-parser": "~5.2.1", "ws": "~8.21.0", "xmlhttprequest-ssl": "~2.1.1" } }, "sha512-iY6QdftLQ9pyiPoX082bpf/u1UewnOaJrtJIF9T0++QB34lZrj0uP+Q/bj8AlUsAxqhnkTV2BS8SBZSxOmoV5Q=="],
 
     "engine.io-parser": ["engine.io-parser@5.2.3", "", {}, "sha512-HqD3yTBfnBxIrbnM1DoD6Pcq8NECnh8d4As1Qgh0z5Gg3jRRIqijury0CL3ghu/edArpUYiYqQiDUQBIs4np3Q=="],
-
-    "env": ["env@workspace:packages/env"],
 
     "env-paths": ["env-paths@3.0.0", "", {}, "sha512-dtJUTepzMW3Lm/NPxRf3wP4642UWhjL2sQxc+ym2YMj1m/H2zDNQOlezafzkHwn6sMstjHTwG6iQQsctDW/b1A=="],
 
