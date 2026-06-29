@@ -1,0 +1,180 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  PASSENGER
+  DRIVER
+  ADMIN
+}
+
+enum TripStatus {
+  SCHEDULED
+  BOARDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SeatStatus {
+  AVAILABLE
+  RESERVED
+  BOOKED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id       String   @id @default(cuid())
+  name     String
+  email    String   @unique
+  password String
+  role     UserRole @default(PASSENGER)
+
+  driver   Driver?
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Driver {
+  id String @id @default(cuid())
+
+  userId        String  @unique
+  assignedBusId String? @unique
+
+  user        User @relation(fields: [userId], references: [id])
+  assignedBus Bus? @relation(fields: [assignedBusId], references: [id])
+}
+
+model Bus {
+  id String @id @default(cuid())
+
+  number   String @unique
+  capacity Int
+
+  driver Driver?
+
+  trips    Trip[]
+  location BusLocation?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Stop {
+  id String @id @default(cuid())
+
+  name String
+
+  latitude  Float
+  longitude Float
+
+  routeStops RouteStop[]
+}
+
+model Route {
+  id String @id @default(cuid())
+
+  name String
+
+  stops RouteStop[]
+  trips Trip[]
+}
+
+model RouteStop {
+  routeId String
+  stopId  String
+
+  order Int
+
+  distanceFromStart Float
+
+  route Route @relation(fields: [routeId], references: [id])
+  stop  Stop  @relation(fields: [stopId], references: [id])
+
+  @@id([routeId, stopId])
+}
+
+model Trip {
+  id String @id @default(cuid())
+
+  busId   String
+  routeId String
+
+  departureTime DateTime
+  arrivalTime   DateTime
+
+  status TripStatus @default(SCHEDULED)
+
+  bus   Bus   @relation(fields: [busId], references: [id])
+  route Route @relation(fields: [routeId], references: [id])
+
+  seats    Seat[]
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Seat {
+  id String @id @default(cuid())
+
+  tripId String
+
+  seatNumber Int
+
+  status SeatStatus @default(AVAILABLE)
+
+  trip Trip @relation(fields: [tripId], references: [id])
+
+  booking Booking?
+}
+
+model Booking {
+  id String @id @default(cuid())
+
+  tripId String
+
+  passengerId String
+
+  seatId String @unique
+
+  paymentStatus PaymentStatus @default(PENDING)
+
+  trip      Trip @relation(fields: [tripId], references: [id])
+  passenger User @relation(fields: [passengerId], references: [id])
+  seat      Seat @relation(fields: [seatId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model BusLocation {
+  busId String @id
+
+  latitude  Float
+  longitude Float
+
+  heading Float
+  speed   Float
+
+  updatedAt DateTime @updatedAt
+
+  bus Bus @relation(fields: [busId], references: [id])
+}
