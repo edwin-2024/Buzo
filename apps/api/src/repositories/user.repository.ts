@@ -1,4 +1,4 @@
-import { prisma } from "@buzo/db";
+import { prisma, Prisma } from "@buzo/db";
 
 export class UserRepository {
     async findById(id: string) {
@@ -21,12 +21,7 @@ export class UserRepository {
         });
     }
 
-    async create(data: {
-        name: string;
-        email: string;
-        password: string;
-        role: "ADMIN" | "DRIVER" | "PASSENGER";
-    }) {
+    async create(data: Prisma.UserCreateInput) {
         return prisma.user.create({
             data,
         });
