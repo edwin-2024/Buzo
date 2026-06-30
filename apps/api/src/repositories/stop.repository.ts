@@ -28,6 +28,16 @@ export class StopRepository {
         });
     }
 
+    async findManyByIds(ids: string[]) {
+        return prisma.stop.findMany({
+            where: {
+                id: {
+                    in: ids,
+                },
+            },
+        });
+    }
+
     async create(data: Prisma.StopCreateInput) {
         return prisma.stop.create({
             data,
