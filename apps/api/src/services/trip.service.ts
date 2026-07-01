@@ -6,6 +6,7 @@ import type {
     CreateTripInput,
     UpdateTripInput,
 } from "../validation/trip.schema";
+import { seatRepository } from "../repositories/seat.repository";
 
 export class TripService {
     async findAll() {
@@ -36,8 +37,7 @@ export class TripService {
                 "Arrival time must be after departure time"
             );
         }
-
-        return tripRepository.create({
+        const trip = await tripRepository.create({
             departureTime: input.departureTime,
             arrivalTime: input.arrivalTime,
             status: input.status,
@@ -52,6 +52,20 @@ export class TripService {
                 },
             },
         });
+
+        const seats = Array.from(
+            { length: bus.capacity },
+            (_, index) => ({
+                tripId: trip.id,
+                seatNumber: index + 1,
+                status: "AVAILABLE",
+            })
+        );
+
+        await seatRepository.createMany(seats);
+
+        return trip;
+
     }
 
     async update(

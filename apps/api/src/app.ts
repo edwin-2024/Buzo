@@ -6,6 +6,8 @@ import routeRoutes from "./routes/route.routes";
 import busRoutes from "./routes/bus.routes";
 import driverRoutes from "./routes/driver.routes";
 import tripRoutes from "./routes/trip.routes";
+import bookingRoutes from "./routes/booking.routes";
+import seatRoutes from "./routes/seat.routes";
 
 const app = express();
 
@@ -23,5 +25,7 @@ app.use("/api/routes", routeRoutes);
 app.use("/api/buses", busRoutes);
 app.use("/api/drivers", driverRoutes);
 app.use("/api/trips", tripRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api", seatRoutes);
 
 export default app;
