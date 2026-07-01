@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { busLocationController } from "../controllers/bus-location.controller";
+import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -11,6 +12,7 @@ router.get(
 
 router.patch(
     "/:busId/location",
+    authMiddleware,
     busLocationController.update
 );
 

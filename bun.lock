@@ -6,7 +6,6 @@
       "name": "Buzo",
       "devDependencies": {
         "prettier": "^3.7.4",
-        "socket.io-client": "^4.8.3",
         "turbo": "^2.10.0",
         "typescript": "^6.0.3",
       },
@@ -39,6 +38,7 @@
     "apps/api": {
       "name": "api",
       "dependencies": {
+        "@buzo/chatbot": "workspace:*",
         "@buzo/db": "workspace:*",
         "@buzo/env": "workspace:*",
         "bcrypt": "^6.0.0",
@@ -131,8 +131,9 @@
       },
     },
     "packages/chatbot": {
-      "name": "chatbot",
+      "name": "@buzo/chatbot",
       "dependencies": {
+        "@buzo/env": "workspace:*",
         "@google/genai": "^2.10.0",
       },
       "devDependencies": {
@@ -259,6 +260,8 @@
     },
   },
   "packages": {
+    "@buzo/chatbot": ["@buzo/chatbot@workspace:packages/chatbot"],
+
     "@buzo/db": ["@buzo/db@workspace:packages/db"],
 
     "@buzo/env": ["@buzo/env@workspace:packages/env"],
@@ -686,8 +689,6 @@
     "chalk": ["chalk@4.1.2", "", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA=="],
 
     "chart.js": ["chart.js@4.5.1", "", { "dependencies": { "@kurkle/color": "^0.3.0" } }, "sha512-GIjfiT9dbmHRiYi6Nl2yFCq7kkwdkp1W/lp2J99rX0yo9tgJGn3lKQATztIjb5tVtevcBtIdICNWqlq5+E8/Pw=="],
-
-    "chatbot": ["chatbot@workspace:packages/chatbot"],
 
     "chokidar": ["chokidar@5.0.0", "", { "dependencies": { "readdirp": "^5.0.0" } }, "sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw=="],
 

@@ -16,5 +16,3 @@ router.delete("/:id", routeController.delete);
 // router.post("/", authMiddleware, requireRole("ADMIN"), routeController.create);
 
 export default router;
-
-//cmqzacqbi000d2ouxf987377c , cmqzacqry000f2ouxnswkor9i , cmr07n6p30000kguxa6gzmao7 

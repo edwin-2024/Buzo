@@ -34,12 +34,23 @@ export class StopService {
         id: string,
         input: UpdateStopInput
     ) {
-        const existingStop = await stopRepository.findByName(input.name);
-
-        if (existingStop && existingStop.id !== id) {
-            throw new Error("Stop already exists");
-        }
         await this.findById(id);
+
+        if (input.name) {
+            const existingStop =
+                await stopRepository.findByName(
+                    input.name
+                );
+
+            if (
+                existingStop &&
+                existingStop.id !== id
+            ) {
+                throw new Error(
+                    "Stop already exists"
+                );
+            }
+        }
 
         return stopRepository.update(id, input);
     }

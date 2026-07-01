@@ -1,5 +1,5 @@
 {
-  "name": "chatbot",
+  "name": "@buzo/chatbot",
   "module": "index.ts",
   "type": "module",
   "private": true,
@@ -9,7 +9,11 @@
   "peerDependencies": {
     "typescript": "^5"
   },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
+    "@buzo/env": "workspace:*",
     "@google/genai": "^2.10.0"
   }
 }

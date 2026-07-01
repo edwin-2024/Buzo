@@ -5,18 +5,14 @@ import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
 
-router.post("/signup", (req, res, next) =>
-    authController.signUp(req, res, next)
-);
+router.post("/signup", authController.signUp);
 
-router.post("/login", (req, res, next) =>
-    authController.login(req, res, next)
-);
+router.post("/login", authController.login);
 
 router.get(
     "/me",
     authMiddleware,
-    (req, res, next) => authController.me(req, res, next)
+    authController.me
 );
 
 export default router;

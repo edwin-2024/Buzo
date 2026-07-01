@@ -23,6 +23,67 @@ export class TripRepository {
         });
     }
 
+    async searchTrips(
+        origin: string,
+        destination: string
+    ) {
+        return prisma.trip.findMany({
+            where: {
+                AND: [
+                    {
+                        route: {
+                            stops: {
+                                some: {
+                                    stop: {
+                                        name: {
+                                            equals: origin,
+                                            mode: "insensitive",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        route: {
+                            stops: {
+                                some: {
+                                    stop: {
+                                        name: {
+                                            equals: destination,
+                                            mode: "insensitive",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+
+            include: {
+                bus: true,
+
+                route: {
+                    include: {
+                        stops: {
+                            include: {
+                                stop: true,
+                            },
+                            orderBy: {
+                                order: "asc",
+                            },
+                        },
+                    },
+                },
+            },
+
+            orderBy: {
+                departureTime: "asc",
+            },
+        });
+    }
+
     async create(data: Prisma.TripCreateInput) {
         return prisma.trip.create({
             data,

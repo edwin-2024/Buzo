@@ -77,6 +77,34 @@ export class TripService {
         return tripRepository.update(id, input);
     }
 
+    async searchTrips(
+        origin: string,
+        destination: string
+    ) {
+        const trips = await tripRepository.searchTrips(
+            origin,
+            destination
+        );
+
+        return trips.filter((trip) => {
+            const originIndex = trip.route.stops.findIndex(
+                (s) =>
+                    s.stop.name.toLowerCase() === origin.toLowerCase()
+            );
+
+            const destinationIndex = trip.route.stops.findIndex(
+                (s) =>
+                    s.stop.name.toLowerCase() === destination.toLowerCase()
+            );
+
+            return (
+                originIndex !== -1 &&
+                destinationIndex !== -1 &&
+                originIndex < destinationIndex
+            );
+        });
+    }
+
     async delete(id: string) {
         await this.findById(id);
 

@@ -19,6 +19,7 @@
     "dev": "bun --watch src/server.ts"
   },
   "dependencies": {
+    "@buzo/chatbot": "workspace:*",
     "@buzo/db": "workspace:*",
     "@buzo/env": "workspace:*",
     "bcrypt": "^6.0.0",

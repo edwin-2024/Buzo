@@ -7,11 +7,11 @@ import {
 } from "../validation/auth.schema";
 
 export class AuthController {
-    async signUp(
+    signUp = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ) {
+    ) => {
         try {
             const input = signupSchema.parse(req.body);
 
@@ -21,13 +21,13 @@ export class AuthController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    async login(
+    login = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ) {
+    ) => {
         try {
             const input = loginSchema.parse(req.body);
 
@@ -37,13 +37,13 @@ export class AuthController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    async me(
+    me = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ) {
+    ) => {
         try {
             const userId = req.user.userId;
 
@@ -53,7 +53,7 @@ export class AuthController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 }
 
 export const authController = new AuthController();

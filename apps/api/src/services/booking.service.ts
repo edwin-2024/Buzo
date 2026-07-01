@@ -1,4 +1,4 @@
-import { SeatStatus } from "@buzo/db";
+import { prisma, SeatStatus } from "@buzo/db";
 
 import { bookingRepository } from "../repositories/booking.repository";
 import { seatRepository } from "../repositories/seat.repository";
@@ -81,10 +81,17 @@ export class BookingService {
     }
 
     async delete(id: string) {
-        await this.findById(id);
+        const booking = await this.findById(id);
 
-        return bookingRepository.delete(id);
+        await prisma.$transaction(async (tx) => {
+            await tx.booking.delete({ where: { id } });
+            await tx.seat.update({
+                where: { id: booking.seatId },
+                data: { status: "AVAILABLE" },
+            });
+        });
     }
+
 }
 
 export const bookingService =

@@ -11,6 +11,7 @@ async function main() {
     console.log("🌱 Seeding database...");
 
 
+    await prisma.booking.deleteMany();
     await prisma.seat.deleteMany();
     await prisma.trip.deleteMany();
     await prisma.routeStop.deleteMany();
@@ -19,7 +20,6 @@ async function main() {
     await prisma.busLocation.deleteMany();
     await prisma.bus.deleteMany();
     await prisma.driver.deleteMany();
-    await prisma.booking.deleteMany();
     await prisma.user.deleteMany();
 
 
@@ -77,6 +77,9 @@ async function main() {
         "Silk Board",
         "Electronic City",
         "Bommasandra",
+        "Whitefield-metro",
+        "Hopefarm",
+        "Kadugodi",
     ];
 
     const stops = [];
@@ -106,6 +109,12 @@ async function main() {
         },
     });
 
+    const route3 = await prisma.route.create({
+        data: {
+            name: "Majestic-Whitefield Express",
+        },
+    });
+
     for (let i = 0; i < 5; i++) {
         await prisma.routeStop.create({
             data: {
@@ -124,6 +133,19 @@ async function main() {
                 stopId: stops[i].id,
                 order: i - 4,
                 distanceFromStart: (i - 5) * 6,
+            },
+        });
+    }
+
+    // Route 3: Majestic → Baiyappanahalli → KR Puram → Whitefield-metro → Hopefarm → Kadugodi
+    const route3Stops = [0, 3, 4, 10, 11, 12]; // indices into stops[]
+    for (let i = 0; i < route3Stops.length; i++) {
+        await prisma.routeStop.create({
+            data: {
+                routeId: route3.id,
+                stopId: stops[route3Stops[i]].id,
+                order: i + 1,
+                distanceFromStart: i * 7,
             },
         });
     }
@@ -149,9 +171,19 @@ async function main() {
         },
     });
 
+    const trip3 = await prisma.trip.create({
+        data: {
+            busId: buses[2].id,
+            routeId: route3.id,
+            departureTime: new Date("2026-07-01T07:00:00"),
+            arrivalTime: new Date("2026-07-01T08:30:00"),
+            status: TripStatus.SCHEDULED,
+        },
+    });
 
 
-    for (const trip of [trip1, trip2]) {
+
+    for (const trip of [trip1, trip2, trip3]) {
         for (let i = 1; i <= 40; i++) {
             await prisma.seat.create({
                 data: {
