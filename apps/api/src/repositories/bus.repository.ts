@@ -1,8 +1,11 @@
-import { prisma } from "@repo/db";
+import { prisma, Prisma } from "@buzo/db";
 
 export class BusRepository {
     async findAll() {
         return prisma.bus.findMany({
+            orderBy: {
+                number: "asc",
+            },
             include: {
                 driver: true,
             },
@@ -18,12 +21,33 @@ export class BusRepository {
         });
     }
 
-    async create(number: string, capacity: number) {
-        return prisma.bus.create({
-            data: {
-                number,
-                capacity,
+    async findByNumber(number: string) {
+        return prisma.bus.findFirst({
+            where: {
+                number: {
+                    equals: number,
+                    mode: "insensitive",
+                },
             },
+        });
+    }
+
+    async create(data: Prisma.BusCreateInput) {
+        return prisma.bus.create({
+            data,
+        });
+    }
+
+    async update(id: string, data: Prisma.BusUpdateInput) {
+        return prisma.bus.update({
+            where: { id },
+            data,
+        });
+    }
+
+    async delete(id: string) {
+        return prisma.bus.delete({
+            where: { id },
         });
     }
 }
