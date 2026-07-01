@@ -5,6 +5,7 @@ import stopRoutes from "./routes/stop.routes";
 import routeRoutes from "./routes/route.routes";
 import busRoutes from "./routes/bus.routes";
 import driverRoutes from "./routes/driver.routes";
+import tripRoutes from "./routes/trip.routes";
 
 const app = express();
 
@@ -21,5 +22,6 @@ app.use("/api/stops", stopRoutes);
 app.use("/api/routes", routeRoutes);
 app.use("/api/buses", busRoutes);
 app.use("/api/drivers", driverRoutes);
+app.use("/api/trips", tripRoutes);
 
 export default app;
