@@ -3,6 +3,8 @@ import {
     trackBusTool,
     checkSeatsTool,
     bookSeatTool,
+    listRoutesTool,
+    listStopsTool,
 } from ".";
 
 export const toolRegistry = [
@@ -10,4 +12,6 @@ export const toolRegistry = [
     trackBusTool,
     checkSeatsTool,
     bookSeatTool,
+    listRoutesTool,
+    listStopsTool,
 ];

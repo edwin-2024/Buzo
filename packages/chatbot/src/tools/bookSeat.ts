@@ -1,21 +1,15 @@
 export const bookSeatTool = {
     name: "bookSeat",
-    description: "Book a seat for a trip.",
+    description: "Book seats for a trip using natural language constraints.",
     parameters: {
         type: "object",
         properties: {
-            tripId: {
-                type: "string",
-            },
-
-            seatId: {
-                type: "string",
-            },
+            origin: { type: "string", description: "Departure city or stop" },
+            destination: { type: "string", description: "Arrival city or stop" },
+            numberOfSeats: { type: "number", description: "Number of seats to book (default 1)" },
+            position: { type: "string", description: "Preferred position (front, middle, back)" },
+            sideBySide: { type: "boolean", description: "Whether the seats should be adjacent" },
         },
-
-        required: [
-            "tripId",
-            "seatId",
-        ],
+        required: ["origin", "destination", "numberOfSeats"],
     },
 };

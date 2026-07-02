@@ -1,18 +1,12 @@
 export const checkSeatsTool = {
     name: "checkSeats",
-
-    description:
-        "Get available seats for a trip.",
-
+    description: "Check available seats for a trip between two stops.",
     parameters: {
         type: "object",
-
         properties: {
-            tripId: {
-                type: "string",
-            },
+            origin: { type: "string", description: "Departure city or stop" },
+            destination: { type: "string", description: "Arrival city or stop" },
         },
-
-        required: ["tripId"],
+        required: ["origin", "destination"],
     },
 };

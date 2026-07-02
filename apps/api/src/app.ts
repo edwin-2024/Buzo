@@ -11,6 +11,7 @@ import bookingRoutes from "./routes/booking.routes";
 import seatRoutes from "./routes/seat.routes";
 import busLocationRoutes from "./routes/bus-location.routes";
 import chatRoutes from "./routes/chat.routes";
+import paymentRoutes from "./routes/payment.routes";
 
 const app = express();
 
@@ -33,5 +34,6 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api", seatRoutes);
 app.use("/api/buses", busLocationRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/payments", paymentRoutes);
 
 export default app;

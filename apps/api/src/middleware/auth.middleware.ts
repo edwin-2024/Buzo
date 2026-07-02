@@ -41,3 +41,25 @@ export async function authMiddleware(
         });
     }
 }
+
+export async function optionalAuthMiddleware(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    try {
+        const authHeader = req.headers.authorization;
+
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+            const token = authHeader.split(" ")[1];
+            if (token) {
+                const payload = verifyToken(token);
+                req.user = payload;
+            }
+        }
+    } catch {
+        // Ignore invalid token, just don't set req.user
+    }
+    
+    next();
+}

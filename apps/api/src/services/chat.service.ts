@@ -31,11 +31,11 @@ export class ChatService {
         try {
             result = await handler(action.arguments, userId);
         } catch (error: any) {
-            return {
-                tool: action.name,
+            result = {
                 error: error.message ?? "Tool execution failed",
             };
         }
+        
         const response =
             await generateResponse(
                 message,

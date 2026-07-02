@@ -36,7 +36,7 @@ export class TripRepository {
                                 some: {
                                     stop: {
                                         name: {
-                                            equals: origin,
+                                            contains: origin,
                                             mode: "insensitive",
                                         },
                                     },
@@ -50,7 +50,7 @@ export class TripRepository {
                                 some: {
                                     stop: {
                                         name: {
-                                            equals: destination,
+                                            contains: destination,
                                             mode: "insensitive",
                                         },
                                     },

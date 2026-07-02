@@ -89,12 +89,12 @@ export class TripService {
         return trips.filter((trip) => {
             const originIndex = trip.route.stops.findIndex(
                 (s) =>
-                    s.stop.name.toLowerCase() === origin.toLowerCase()
+                    s.stop.name.toLowerCase().includes(origin.toLowerCase())
             );
 
             const destinationIndex = trip.route.stops.findIndex(
                 (s) =>
-                    s.stop.name.toLowerCase() === destination.toLowerCase()
+                    s.stop.name.toLowerCase().includes(destination.toLowerCase())
             );
 
             return (

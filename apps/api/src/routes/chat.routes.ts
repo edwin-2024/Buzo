@@ -1,14 +1,14 @@
 import { Router } from "express";
 
 import { chatController } from "../controllers/chat.controller";
-import { authMiddleware } from "../middleware/auth.middleware";
+import { optionalAuthMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
 
 router.post(
     "/",
-    authMiddleware,
+    optionalAuthMiddleware,
     chatController.chat
 );
 
-export default router;
+export default router;
