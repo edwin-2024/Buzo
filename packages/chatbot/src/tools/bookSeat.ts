@@ -1,17 +1,15 @@
-import { Type } from "@google/genai";
-
 export const bookSeatTool = {
     name: "bookSeat",
     description: "Book a seat for a trip.",
     parameters: {
-        type: Type.OBJECT,
+        type: "object",
         properties: {
             tripId: {
-                type: Type.STRING,
+                type: "string",
             },
 
             seatId: {
-                type: Type.STRING,
+                type: "string",
             },
         },
 

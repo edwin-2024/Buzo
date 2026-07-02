@@ -1,40 +1,31 @@
-import { ai } from "./client";
+import { callLLMWithTools } from "./client";
 import { toolRegistry } from "./tools/registry";
 import { SYSTEM_PROMPT } from "./prompts";
 
 export async function execute(prompt: string) {
-    const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-lite",
+    const response = await callLLMWithTools(
+        prompt,
+        SYSTEM_PROMPT,
+        toolRegistry
+    );
 
-        contents: prompt,
+    if (
+        response.toolCalls &&
+        response.toolCalls.length > 0
+    ) {
+        const toolCall = response.toolCalls[0]!;
 
-        config: {
-            systemInstruction: SYSTEM_PROMPT,
-            tools: [
-                {
-                    functionDeclarations: toolRegistry,
-                },
-            ],
-        },
-    });
-
-    const functionCall =
-        response.functionCalls?.[0];
-
-    if (!functionCall) {
         return {
-            type: "text",
-            text:
-                response.text ??
-                "I couldn't understand the request.",
+            type: "function" as const,
+            name: toolCall.name,
+            arguments: toolCall.arguments,
         };
     }
 
     return {
-        type: "function",
-
-        name: functionCall.name,
-
-        arguments: functionCall.args ?? {},
+        type: "text" as const,
+        text:
+            response.content ??
+            "I couldn't understand the request.",
     };
 }

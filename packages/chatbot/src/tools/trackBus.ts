@@ -1,5 +1,3 @@
-import { Type } from "@google/genai";
-
 export const trackBusTool = {
     name: "trackBus",
 
@@ -7,11 +5,11 @@ export const trackBusTool = {
         "Track the live location of a bus.",
 
     parameters: {
-        type: Type.OBJECT,
+        type: "object",
 
         properties: {
             busNumber: {
-                type: Type.STRING,
+                type: "string",
             },
         },
 

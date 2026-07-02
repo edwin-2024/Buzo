@@ -1,5 +1,3 @@
-import { Type } from "@google/genai";
-
 export const checkSeatsTool = {
     name: "checkSeats",
 
@@ -7,11 +5,11 @@ export const checkSeatsTool = {
         "Get available seats for a trip.",
 
     parameters: {
-        type: Type.OBJECT,
+        type: "object",
 
         properties: {
             tripId: {
-                type: Type.STRING,
+                type: "string",
             },
         },
 

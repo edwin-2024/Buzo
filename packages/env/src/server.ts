@@ -13,7 +13,19 @@ const envSchema = z.object({
         .string()
         .min(32, "JWT_SECRET must be at least 32 characters long"),
 
-    GEMINI_API_KEY: z.string().min(1),
+    GEMINI_API_KEY: z.string().min(1).optional(),
+
+    LLM_PROVIDER: z
+        .enum(["ollama", "gemini"])
+        .default("ollama"),
+
+    OLLAMA_URL: z
+        .string()
+        .default("http://127.0.0.1:11434"),
+
+    OLLAMA_MODEL: z
+        .string()
+        .default("qwen3:4b-instruct-2507-q4_K_M"),
 
     PORT: z.coerce.number().int().positive().default(5000),
 

@@ -1,28 +1,26 @@
-import { Type } from "@google/genai";
-
 export const searchTripsTool = {
     name: "searchTrips",
     description:
         "Search for available buses or trips between two stops. Use this when the user asks about buses, trips, routes, or travel options from one place to another.",
 
     parameters: {
-        type: Type.OBJECT,
+        type: "object",
 
         properties: {
             origin: {
-                type: Type.STRING,
+                type: "string",
                 description:
                     "The departure stop name",
             },
 
             destination: {
-                type: Type.STRING,
+                type: "string",
                 description:
                     "The arrival stop name",
             },
 
             date: {
-                type: Type.STRING,
+                type: "string",
                 description:
                     "Optional date in YYYY-MM-DD format",
             },

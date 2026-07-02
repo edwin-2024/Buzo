@@ -7,7 +7,11 @@ export class BusRepository {
                 number: "asc",
             },
             include: {
-                driver: true,
+                driver: {
+                    include: {
+                        user: true
+                    }
+                }
             },
         });
     }
