@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
-import { Ticket, Map, Calendar, ChevronRight } from "lucide-react"
+import { Ticket, Map, Calendar, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { api } from "@/lib/axios"
 import { useAuthStore } from "@/stores/auth.store"
@@ -17,16 +18,24 @@ import { Badge } from "@/components/ui/badge"
 export function MyBookingsPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const queryClient = useQueryClient()
 
   const { data: bookings, isLoading } = useQuery({
     queryKey: ["my-bookings"],
     queryFn: async () => {
-      // In a real app we'd have an endpoint scoped to the user, e.g. GET /bookings/me
-      // Since we don't, we fetch all bookings and filter by passenger ID on client side (for MVP only)
-      const { data } = await api.get("/bookings")
-      return data.filter((b: any) => b.passengerId === user?.id)
+      const { data } = await api.get("/bookings/me")
+      return data
     },
     enabled: !!user
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/bookings/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] })
+      toast.success("Booking cancelled successfully")
+    },
+    onError: () => toast.error("Failed to cancel booking")
   })
 
   if (!user) {
@@ -41,6 +50,112 @@ export function MyBookingsPage() {
       case "REFUNDED": return "bg-muted text-muted-foreground"
       default: return "bg-muted text-muted-foreground"
     }
+  }
+
+  const upcomingBookings = bookings?.filter((b: any) => 
+    b.trip.status !== "COMPLETED" && b.trip.status !== "CANCELLED"
+  ) || []
+
+  const pastBookings = bookings?.filter((b: any) => 
+    b.trip.status === "COMPLETED" || b.trip.status === "CANCELLED"
+  ) || []
+
+  const renderBookingCard = (booking: any) => {
+    return (
+      <Card key={booking.id} className="overflow-hidden transition-all hover:shadow-md border-border/50">
+        <div className="md:flex">
+          {/* Left Side: Ticket Visual */}
+          <div className="bg-primary/5 p-6 border-b md:border-b-0 md:border-r border-dashed border-primary/20 md:w-48 flex flex-col items-center justify-center">
+            <div className="text-center">
+              <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Seat</div>
+              <div className="text-5xl font-black text-primary">{booking.seat?.seatNumber}</div>
+            </div>
+          </div>
+          
+          {/* Right Side: Details */}
+          <div className="flex-1 p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-xl font-bold">{booking.trip.route?.name}</h3>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant="outline" className={getStatusColor(booking.paymentStatus)}>
+                    {booking.paymentStatus}
+                  </Badge>
+                  {booking.trip.status === "COMPLETED" && (
+                    <Badge variant="secondary" className="bg-muted text-muted-foreground text-[10px]">
+                      COMPLETED
+                    </Badge>
+                  )}
+                  {booking.trip.status === "CANCELLED" && (
+                    <Badge variant="destructive" className="text-[10px]">
+                      CANCELLED
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+                <div className="flex items-start space-x-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="font-medium">Departure</p>
+                    <p className="text-muted-foreground">{new Date(booking.trip.departureTime).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <Map className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="font-medium">Bus Details</p>
+                    <p className="text-muted-foreground">{booking.trip.bus?.number}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex items-center justify-between border-t pt-4">
+              <div className="font-mono text-xs text-muted-foreground">
+                ID: {booking.id}
+              </div>
+              
+              <div className="flex gap-2">
+                {booking.paymentStatus === "PENDING" && (
+                  <Button 
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={() => navigate(`/payment?tripId=${booking.tripId}`)}
+                  >
+                    Pay Now
+                  </Button>
+                )}
+                
+                {booking.paymentStatus === "PAID" && booking.trip.status !== "COMPLETED" && booking.trip.status !== "CANCELLED" && (
+                  <Button 
+                    variant="outline" 
+                    className="bg-primary/5 border-primary/20 text-primary hover:bg-primary/10"
+                    onClick={() => navigate(`/track?tripId=${booking.tripId}`)}
+                  >
+                    <Map className="mr-2 h-4 w-4" /> Live Track Bus
+                  </Button>
+                )}
+                {booking.trip.status !== "COMPLETED" && booking.trip.status !== "CANCELLED" && (
+                  <Button 
+                    variant="ghost" 
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => {
+                      if (confirm("Are you sure you want to cancel this ticket? This action cannot be undone.")) {
+                        cancelMutation.mutate(booking.id)
+                      }
+                    }}
+                    disabled={cancelMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" /> Cancel Ticket
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    )
   }
 
   return (
@@ -77,68 +192,31 @@ export function MyBookingsPage() {
             </CardContent>
           </Card>
         ) : (
-          bookings?.map((booking: any) => {
-            const isUpcoming = new Date(booking.trip.departureTime) > new Date()
-            
-            return (
-              <Card key={booking.id} className="overflow-hidden transition-all hover:shadow-md border-border/50">
-                <div className="md:flex">
-                  {/* Left Side: Ticket Visual */}
-                  <div className="bg-primary/5 p-6 border-b md:border-b-0 md:border-r border-dashed border-primary/20 md:w-48 flex flex-col items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Seat</div>
-                      <div className="text-5xl font-black text-primary">{booking.seat?.seatNumber}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Right Side: Details */}
-                  <div className="flex-1 p-6 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-xl font-bold">{booking.trip.route?.name}</h3>
-                        <Badge variant="outline" className={getStatusColor(booking.paymentStatus)}>
-                          {booking.paymentStatus}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-                        <div className="flex items-start space-x-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="font-medium">Departure</p>
-                            <p className="text-muted-foreground">{new Date(booking.trip.departureTime).toLocaleString()}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-2">
-                          <Map className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="font-medium">Bus Details</p>
-                            <p className="text-muted-foreground">{booking.trip.bus?.number}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 flex items-center justify-between border-t pt-4">
-                      <div className="font-mono text-xs text-muted-foreground">
-                        ID: {booking.id}
-                      </div>
-                      
-                      {isUpcoming && booking.paymentStatus === "PAID" && (
-                        <Button 
-                          variant="outline" 
-                          className="bg-primary/5 border-primary/20 text-primary hover:bg-primary/10"
-                          onClick={() => navigate(`/track?tripId=${booking.tripId}`)}
-                        >
-                          <Map className="mr-2 h-4 w-4" /> Live Track Bus
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+          <>
+            {upcomingBookings.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Upcoming Trips
+                </h2>
+                <div className="space-y-4">
+                  {upcomingBookings.map(renderBookingCard)}
                 </div>
-              </Card>
-            )
-          })
+              </div>
+            )}
+            
+            {pastBookings.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-muted-foreground">
+                  <Map className="h-5 w-5" />
+                  Past History
+                </h2>
+                <div className="space-y-4">
+                  {pastBookings.map(renderBookingCard)}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

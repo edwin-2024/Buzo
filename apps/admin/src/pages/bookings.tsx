@@ -47,7 +47,7 @@ export function BookingsPage() {
         <h2 className="text-3xl font-bold tracking-tight">Operations: Bookings</h2>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card overflow-x-auto pb-2">
         <Table>
           <TableHeader>
             <TableRow>

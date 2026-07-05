@@ -14,13 +14,14 @@ export class ChatController {
         next: NextFunction
     ) => {
         try {
-            const { message } = chatSchema.parse(
+            const { message, history } = chatSchema.parse(
                 req.body
             );
 
             const result =
                 await chatService.chat(
                     message,
+                    history,
                     req.user?.userId
                 );
 

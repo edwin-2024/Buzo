@@ -7,6 +7,12 @@ const router = Router();
 
 router.get("/", bookingController.getAll);
 
+router.get(
+    "/me",
+    authMiddleware,
+    bookingController.getMyBookings
+);
+
 router.get("/:id", bookingController.getById);
 
 router.post(

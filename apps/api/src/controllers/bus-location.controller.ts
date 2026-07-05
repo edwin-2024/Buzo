@@ -43,6 +43,19 @@ export class BusLocationController {
             next(err);
         }
     };
+
+    getAll = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) => {
+        try {
+            const locations = await busLocationService.getAllLocations();
+            res.json(locations);
+        } catch (err) {
+            next(err);
+        }
+    };
 }
 
 export const busLocationController =

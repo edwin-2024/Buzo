@@ -6,6 +6,11 @@ import { authMiddleware } from "../middleware/auth.middleware";
 const router = Router();
 
 router.get(
+    "/locations",
+    busLocationController.getAll
+);
+
+router.get(
     "/:busId/location",
     busLocationController.get
 );

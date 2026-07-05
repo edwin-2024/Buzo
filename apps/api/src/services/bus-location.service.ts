@@ -33,6 +33,10 @@ export class BusLocationService {
     async getLocation(busId: string) {
         return busLocationRepository.find(busId);
     }
+
+    async getAllLocations() {
+        return await busLocationRepository.findAll();
+    }
 }
 
 export const busLocationService =

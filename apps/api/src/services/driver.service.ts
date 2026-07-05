@@ -25,28 +25,29 @@ export class DriverService {
     }
 
     async create(input: CreateDriverInput) {
-        const user = await userRepository.findById(input.userId);
+        const user = await userRepository.findByEmail(input.email);
 
         if (!user) {
-            throw new Error("User not found");
-        }
-
-        if (user.role !== UserRole.DRIVER) {
-            throw new Error("User is not a driver");
+            throw new Error("User not found with that email address");
         }
 
         const existingDriver = await driverRepository.findByUserId(
-            input.userId
+            user.id
         );
 
         if (existingDriver) {
-            throw new Error("Driver already exists");
+            throw new Error("User is already a registered driver");
+        }
+        
+        // Upgrade user to DRIVER role if they aren't already
+        if (user.role !== UserRole.DRIVER) {
+            await userRepository.updateRole(user.id, UserRole.DRIVER);
         }
 
         return driverRepository.create({
             user: {
                 connect: {
-                    id: input.userId,
+                    id: user.id,
                 },
             },
         });

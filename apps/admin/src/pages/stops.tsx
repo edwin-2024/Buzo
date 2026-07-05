@@ -134,7 +134,7 @@ export function StopsPage() {
         </Dialog>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card overflow-x-auto pb-2">
         <Table>
           <TableHeader>
             <TableRow>

@@ -22,6 +22,25 @@ export class TripController {
         }
     };
 
+    getMyTrips = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) => {
+        try {
+            // Find driver profile for the user
+            const driver = await tripService.findDriverByUserId(req.user?.userId!);
+            if (!driver || !driver.assignedBusId) {
+                return res.status(200).json([]);
+            }
+            
+            const trips = await tripService.findTripsByBusId(driver.assignedBusId);
+            res.status(200).json(trips);
+        } catch (error) {
+            next(error);
+        }
+    };
+
     getById = async (
         req: Request,
         res: Response,

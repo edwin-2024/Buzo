@@ -18,6 +18,20 @@ export class BookingController {
         }
     };
 
+    getMyBookings = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) => {
+        try {
+            const bookings = await bookingService.findMyBookings(req.user.userId);
+
+            res.status(200).json(bookings);
+        } catch (error) {
+            next(error);
+        }
+    };
+
     getById = async (
         req: Request,
         res: Response,

@@ -12,6 +12,10 @@ export class BookingService {
         return bookingRepository.findAll();
     }
 
+    async findMyBookings(passengerId: string) {
+        return bookingRepository.findMyBookings(passengerId);
+    }
+
     async findById(id: string) {
         const booking = await bookingRepository.findById(id);
 
@@ -40,21 +44,19 @@ export class BookingService {
             throw new Error("Trip not found");
         }
 
-        const seat =
-            await seatRepository.findById(input.seatId);
-
-        if (!seat) {
-            throw new Error("Seat not found");
-        }
-
-        if (seat.tripId !== input.tripId) {
-            throw new Error(
-                "Seat does not belong to this trip"
-            );
-        }
-
-        if (seat.status !== SeatStatus.AVAILABLE) {
-            throw new Error("Seat already booked");
+        const seats = [];
+        for (const seatId of input.seatIds) {
+            const seat = await seatRepository.findById(seatId);
+            if (!seat) {
+                throw new Error(`Seat ${seatId} not found`);
+            }
+            if (seat.tripId !== input.tripId) {
+                throw new Error(`Seat ${seatId} does not belong to this trip`);
+            }
+            if (seat.status !== SeatStatus.AVAILABLE) {
+                throw new Error(`Seat ${seatId} already booked`);
+            }
+            seats.push(seat);
         }
 
         return bookingRepository.createBooking(
@@ -64,11 +66,6 @@ export class BookingService {
                         id: passengerId,
                     },
                 },
-                seat: {
-                    connect: {
-                        id: seat.id,
-                    },
-                },
                 trip: {
                     connect: {
                         id: trip.id,
@@ -76,7 +73,7 @@ export class BookingService {
                 },
                 paymentStatus: "PENDING",
             },
-            seat.id
+            input.seatIds
         );
     }
 

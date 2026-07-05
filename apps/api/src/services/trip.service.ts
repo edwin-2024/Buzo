@@ -79,7 +79,8 @@ export class TripService {
 
     async searchTrips(
         origin: string,
-        destination: string
+        destination: string,
+        date?: string
     ) {
         const trips = await tripRepository.searchTrips(
             origin,
@@ -87,6 +88,7 @@ export class TripService {
         );
 
         return trips.filter((trip) => {
+            // Check route match
             const originIndex = trip.route.stops.findIndex(
                 (s) =>
                     s.stop.name.toLowerCase().includes(origin.toLowerCase())
@@ -97,11 +99,21 @@ export class TripService {
                     s.stop.name.toLowerCase().includes(destination.toLowerCase())
             );
 
-            return (
-                originIndex !== -1 &&
-                destinationIndex !== -1 &&
-                originIndex < destinationIndex
-            );
+            if (originIndex === -1 || destinationIndex === -1 || originIndex >= destinationIndex) {
+                return false;
+            }
+            
+            // Check date match if provided
+            if (date) {
+                // Trip departureTime is a Date object. Convert to YYYY-MM-DD in local time (or UTC)
+                // For simplicity, converting to ISO and extracting the date part
+                const tripDate = trip.departureTime.toISOString().split('T')[0];
+                if (tripDate !== date) {
+                    return false;
+                }
+            }
+            
+            return true;
         });
     }
 
@@ -109,6 +121,14 @@ export class TripService {
         await this.findById(id);
 
         return tripRepository.delete(id);
+    }
+
+    async findDriverByUserId(userId: string) {
+        return tripRepository.findDriverByUserId(userId);
+    }
+
+    async findTripsByBusId(busId: string) {
+        return tripRepository.findTripsByBusId(busId);
     }
 }
 

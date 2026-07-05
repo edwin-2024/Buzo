@@ -7,6 +7,7 @@ import { MyBookingsPage } from '@/pages/my-bookings'
 import { TrackPage } from '@/pages/track'
 import { LoginPage } from '@/pages/login'
 import { RegisterPage } from '@/pages/register'
+import { PaymentPage } from '@/pages/payment'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="track" element={<TrackPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route path="payment" element={<PaymentPage />} />
       </Route>
     </Routes>
   )

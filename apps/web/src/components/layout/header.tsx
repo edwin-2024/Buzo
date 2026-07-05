@@ -1,11 +1,13 @@
+import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Bus, Map, Ticket, User, LogOut } from "lucide-react"
+import { Bus, Map, Ticket, User, LogOut, Menu, X } from "lucide-react"
 
 import { useAuthStore } from "@/stores/auth.store"
 import { Button } from "@/components/ui/button"
 
 export function Header() {
   const { user, logout } = useAuthStore()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -41,6 +43,9 @@ export function Header() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
           {user ? (
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium hidden sm:inline-block">
@@ -63,6 +68,17 @@ export function Header() {
           )}
         </div>
       </div>
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-b bg-background px-4 py-4 space-y-4">
+          <Link to="/search" className="block text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setIsMobileMenuOpen(false)}>Search Trips</Link>
+          {user && (
+            <>
+              <Link to="/my-bookings" className="block text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setIsMobileMenuOpen(false)}>My Bookings</Link>
+              <Link to="/track" className="block text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setIsMobileMenuOpen(false)}>Live Tracking</Link>
+            </>
+          )}
+        </div>
+      )}
     </header>
   )
 }

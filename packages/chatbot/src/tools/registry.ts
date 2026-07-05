@@ -5,6 +5,8 @@ import {
     bookSeatTool,
     listRoutesTool,
     listStopsTool,
+    getDestinationWeather,
+    getTravelTips,
 } from ".";
 
 export const toolRegistry = [
@@ -14,4 +16,6 @@ export const toolRegistry = [
     bookSeatTool,
     listRoutesTool,
     listStopsTool,
+    getDestinationWeather,
+    getTravelTips,
 ];

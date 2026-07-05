@@ -16,6 +16,17 @@ export function registerBusSocket(io: Server) {
             console.log(`${socket.id} left ${busId}`);
         });
 
+        socket.on("busLocationUpdate", (data: any) => {
+            // Broadcast to everyone (or specific rooms if needed)
+            io.emit("bus-location-update", {
+                busId: data.busId,
+                location: {
+                    lat: data.latitude,
+                    lng: data.longitude
+                }
+            });
+        });
+
         socket.on("disconnect", () => {
             console.log(`❌ ${socket.id} disconnected`);
         });

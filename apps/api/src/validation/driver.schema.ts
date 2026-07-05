@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const createDriverSchema = z.object({
-    userId: z.string().cuid(),
+    email: z.string().email(),
 });
 
 export const assignBusSchema = z.object({

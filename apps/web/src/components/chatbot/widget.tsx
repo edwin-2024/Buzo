@@ -35,11 +35,21 @@ export function ChatbotWidget() {
 
     const userMsg = input.trim()
     setInput("")
+    
+    // Extract history before adding the new message
+    const history = messages
+      // Only include messages that have content, skip tool messages without display content if any
+      .filter(m => m.content && m.content.trim() !== "")
+      .map(m => ({ role: m.role, content: m.content }));
+
     setMessages((prev) => [...prev, { role: "user", content: userMsg }])
     setIsLoading(true)
 
     try {
-      const { data } = await api.post("/chat", { message: userMsg })
+      const { data } = await api.post("/chat", { 
+        message: userMsg,
+        history
+      })
 
       setMessages((prev) => [
         ...prev,

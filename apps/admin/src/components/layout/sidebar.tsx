@@ -26,12 +26,15 @@ const navItems = [
   { name: "Live Map", href: "/live-map", icon: MapIcon },
 ]
 
-export function Sidebar() {
+export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v: boolean) => void }) {
   const logout = useAuthStore((state) => state.logout)
   const user = useAuthStore((state) => state.user)
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 flex w-64 flex-col border-r bg-background/80 backdrop-blur-md">
+    <aside className={cn(
+      "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-background/95 backdrop-blur-md transition-transform duration-300 ease-in-out lg:translate-x-0 lg:z-20",
+      isOpen ? "translate-x-0" : "-translate-x-full"
+    )}>
       <div className="flex h-16 shrink-0 items-center px-6">
         <Bus className="mr-2 h-6 w-6 text-primary" />
         <span className="text-xl font-bold tracking-tight">Buzo Admin</span>
@@ -51,6 +54,7 @@ export function Sidebar() {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )
               }
+              onClick={() => setIsOpen(false)}
             >
               <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
               {item.name}

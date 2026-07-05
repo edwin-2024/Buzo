@@ -18,7 +18,14 @@ export class TripRepository {
             where: { id },
             include: {
                 bus: true,
-                route: true,
+                route: {
+                    include: {
+                        stops: {
+                            include: { stop: true },
+                            orderBy: { order: "asc" }
+                        }
+                    }
+                }
             },
         });
     }
@@ -111,6 +118,34 @@ export class TripRepository {
     async delete(id: string) {
         return prisma.trip.delete({
             where: { id },
+        });
+    }
+
+    async findDriverByUserId(userId: string) {
+        return prisma.driver.findUnique({
+            where: { userId }
+        });
+    }
+
+    async findTripsByBusId(busId: string) {
+        return prisma.trip.findMany({
+            where: {
+                busId,
+                status: {
+                    in: ["SCHEDULED", "BOARDING", "IN_PROGRESS"]
+                }
+            },
+            include: {
+                route: {
+                    include: {
+                        stops: {
+                            include: { stop: true },
+                            orderBy: { order: "asc" }
+                        }
+                    }
+                }
+            },
+            orderBy: { departureTime: "asc" }
         });
     }
 }

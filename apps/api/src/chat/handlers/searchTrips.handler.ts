@@ -7,6 +7,7 @@ export const searchTripsHandler: ToolHandler = async (
 ) => {
     return tripService.searchTrips(
         args.origin as string,
-        args.destination as string
+        args.destination as string,
+        args.date as string | undefined
     );
 };

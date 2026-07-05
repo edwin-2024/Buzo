@@ -6,36 +6,75 @@ export class BookingRepository {
             include: {
                 passenger: true,
                 seat: true,
-                trip: true,
+                trip: {
+                    include: {
+                        route: true,
+                        bus: true
+                    }
+                },
             },
         });
     }
 
+    async findMyBookings(passengerId: string) {
+        return prisma.booking.findMany({
+            where: { passengerId },
+            include: {
+                passenger: true,
+                seat: true,
+                trip: {
+                    include: {
+                        route: true,
+                        bus: true
+                    }
+                },
+            },
+            orderBy: {
+                trip: {
+                    departureTime: "desc"
+                }
+            }
+        });
+    }
+
     async createBooking(
-        data: Prisma.BookingCreateInput,
-        seatId: string
+        data: Omit<Prisma.BookingCreateInput, 'seat'>,
+        seatIds: string[]
     ) {
-        return prisma.$transaction(async (tx) => {
-            const booking = await tx.booking.create({
-                data,
+        const bookingPromises = seatIds.map(seatId => 
+            prisma.booking.create({
+                data: {
+                    ...data,
+                    seat: { connect: { id: seatId } }
+                },
                 include: {
                     passenger: true,
                     seat: true,
-                    trip: true,
+                    trip: {
+                        include: {
+                            route: true,
+                            bus: true
+                        }
+                    },
                 },
-            });
+            })
+        );
 
-            await tx.seat.update({
-                where: {
-                    id: seatId,
-                },
-                data: {
-                    status: "BOOKED",
-                },
-            });
-
-            return booking;
+        const updateSeatsPromise = prisma.seat.updateMany({
+            where: { id: { in: seatIds } },
+            data: { status: "BOOKED" },
         });
+
+        const results = await prisma.$transaction([
+            ...bookingPromises,
+            updateSeatsPromise
+        ], {
+            maxWait: 10000,
+            timeout: 30000,
+        });
+
+        results.pop(); // Remove the updateMany result
+        return results as any;
     }
 
     async findById(id: string) {
@@ -44,7 +83,12 @@ export class BookingRepository {
             include: {
                 passenger: true,
                 seat: true,
-                trip: true,
+                trip: {
+                    include: {
+                        route: true,
+                        bus: true
+                    }
+                },
             },
         });
     }
@@ -55,7 +99,12 @@ export class BookingRepository {
             include: {
                 passenger: true,
                 seat: true,
-                trip: true,
+                trip: {
+                    include: {
+                        route: true,
+                        bus: true
+                    }
+                },
             },
         });
     }

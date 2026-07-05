@@ -22,7 +22,7 @@ export function BookingPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   
-  const [selectedSeat, setSelectedSeat] = useState<string | null>(null)
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([])
   const [step, setStep] = useState<"SEAT" | "PAYMENT">("SEAT")
 
   const { data: trip, isLoading: tripLoading } = useQuery({
@@ -44,10 +44,10 @@ export function BookingPage() {
   })
 
   const bookMutation = useMutation({
-    mutationFn: async (seatId: string) => {
+    mutationFn: async (seatIds: string[]) => {
       const { data } = await api.post("/bookings", {
         tripId,
-        seatId
+        seatIds
       })
       return data
     },
@@ -56,7 +56,7 @@ export function BookingPage() {
       navigate("/my-bookings")
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to book seat. It might have been taken.")
+      toast.error(error.response?.data?.message || "Failed to book seats. They might have been taken.")
     }
   })
 
@@ -66,9 +66,9 @@ export function BookingPage() {
       navigate("/login")
       return
     }
-    if (!selectedSeat) return
+    if (selectedSeats.length === 0) return
     
-    bookMutation.mutate(selectedSeat)
+    bookMutation.mutate(selectedSeats)
   }
 
   if (tripLoading || seatsLoading) {
@@ -114,8 +114,8 @@ export function BookingPage() {
                    
                    <div className="mt-12 grid grid-cols-4 gap-4 gap-y-6 justify-items-center">
                      {seats?.map((seat: any) => {
-                       const isBooked = !seat.isAvailable
-                       const isSelected = selectedSeat === seat.id
+                       const isBooked = seat.status !== "AVAILABLE"
+                       const isSelected = selectedSeats.includes(seat.id)
                        
                        // Skip rendering the middle aisle
                        const col = seat.seatNumber % 4
@@ -125,7 +125,9 @@ export function BookingPage() {
                          <div key={seat.id} className={`${col === 3 ? "ml-8" : ""}`}>
                            <button
                              disabled={isBooked}
-                             onClick={() => setSelectedSeat(seat.id)}
+                             onClick={() => setSelectedSeats(prev => 
+                               prev.includes(seat.id) ? prev.filter(id => id !== seat.id) : [...prev, seat.id]
+                             )}
                              className={`
                                w-10 h-12 rounded-t-lg rounded-b-sm border-2 transition-all flex items-center justify-center font-bold text-xs
                                ${isBooked ? "bg-muted text-muted-foreground border-muted cursor-not-allowed" : 
@@ -144,7 +146,7 @@ export function BookingPage() {
               <CardFooter className="justify-end border-t p-6">
                 <Button 
                   size="lg" 
-                  disabled={!selectedSeat}
+                  disabled={selectedSeats.length === 0}
                   onClick={() => setStep("PAYMENT")}
                 >
                   Continue to Payment
@@ -167,7 +169,7 @@ export function BookingPage() {
                 </div>
                 
                 <div className="border rounded-lg p-6 flex flex-col items-center justify-center space-y-4">
-                   <div className="text-4xl font-bold">₹599</div>
+                   <div className="text-4xl font-bold">₹{selectedSeats.length * 599}</div>
                    <p className="text-muted-foreground">Total amount due</p>
                 </div>
               </CardContent>
@@ -214,18 +216,20 @@ export function BookingPage() {
               
               <div className="pt-4 border-t">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">Seat</span>
-                  <span className="font-semibold">
-                    {selectedSeat ? seats?.find((s:any) => s.id === selectedSeat)?.seatNumber : "-"}
+                  <span className="text-muted-foreground">Seat(s)</span>
+                  <span className="font-semibold text-right">
+                    {selectedSeats.length > 0 
+                      ? selectedSeats.map(id => seats?.find((s:any) => s.id === id)?.seatNumber).join(', ') 
+                      : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-muted-foreground">Base Fare</span>
-                  <span className="font-semibold">₹599</span>
+                  <span className="font-semibold">₹599 x {selectedSeats.length || 1}</span>
                 </div>
                 <div className="flex justify-between items-center font-bold text-lg pt-2 border-t mt-2">
                   <span>Total</span>
-                  <span className="text-primary">₹599</span>
+                  <span className="text-primary">₹{(selectedSeats.length || 1) * 599}</span>
                 </div>
               </div>
             </CardContent>

@@ -9,6 +9,7 @@ import { Bus, MapPin } from "lucide-react"
 
 import { api } from "@/lib/axios"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
 // Fix for default Leaflet icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -36,9 +37,8 @@ export function TrackPage() {
   const { data: trip, isLoading } = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async () => {
-      // In a real app we'd have GET /trips/:id
-      const { data } = await api.get("/trips")
-      return data.find((t: any) => t.id === tripId)
+      const { data } = await api.get(`/trips/${tripId}`)
+      return data
     },
     enabled: !!tripId
   })
@@ -60,26 +60,8 @@ export function TrackPage() {
       }
     })
 
-    // For testing/mocking if no actual data comes through
-    // In production, remove this mock timer
-    const mockInterval = setInterval(() => {
-      if (trip?.route?.stops?.length >= 2) {
-         // Mock moving between the first and last stop
-         const start = trip.route.stops[0].stop
-         const end = trip.route.stops[trip.route.stops.length - 1].stop
-         
-         // Random small movement near start
-         setBusLocation({
-           lat: parseFloat(start.latitude) + (Math.random() - 0.5) * 0.01,
-           lng: parseFloat(start.longitude) + (Math.random() - 0.5) * 0.01
-         })
-         setLastUpdated(new Date())
-      }
-    }, 5000)
-
     return () => {
       socket.disconnect()
-      clearInterval(mockInterval)
     }
   }, [tripId, trip])
 
@@ -98,10 +80,12 @@ export function TrackPage() {
 
   // Derive route path from stops for drawing the polyline
   const sortedStops = [...trip.route.stops].sort((a: any, b: any) => a.order - b.order)
-  const routePoints = sortedStops.map((s: any) => [
-    parseFloat(s.stop.latitude), 
-    parseFloat(s.stop.longitude)
-  ])
+  const routePoints = sortedStops
+    .filter((s: any) => s.stop && s.stop.latitude && s.stop.longitude)
+    .map((s: any) => [
+      parseFloat(s.stop.latitude), 
+      parseFloat(s.stop.longitude)
+    ])
   
   // Map center defaults to the first stop, or bus location if available
   const center = busLocation 
@@ -112,20 +96,31 @@ export function TrackPage() {
     <div className="flex flex-col h-[calc(100vh-64px)]">
       <div className="bg-background border-b p-4 shadow-sm z-10">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h1 className="text-xl font-bold flex items-center">
-              <Bus className="mr-2 h-5 w-5 text-primary" />
-              Live Tracking: {trip.route?.name}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1 flex items-center">
-               <span className="font-semibold text-foreground mr-2">{trip.bus?.number}</span>
-               {lastUpdated ? (
-                 <span className="text-green-500 text-xs">● Live (Updated {lastUpdated.toLocaleTimeString()})</span>
-               ) : (
-                 <span className="text-yellow-500 text-xs">● Waiting for GPS signal...</span>
-               )}
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => window.history.back()} className="shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold flex items-center">
+                <Bus className="mr-2 h-5 w-5 text-primary" />
+                Live Tracking: {trip.route?.name}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 flex items-center">
+                 <span className="font-semibold text-foreground mr-2">{trip.bus?.number}</span>
+                 {lastUpdated ? (
+                   <span className="text-green-500 text-xs">● Live (Updated {lastUpdated.toLocaleTimeString()})</span>
+                 ) : (
+                   <span className="text-yellow-500 text-xs">● Waiting for GPS signal...</span>
+                 )}
+              </p>
+            </div>
           </div>
+          
+          <Button variant="outline" onClick={() => {
+            alert(`Bus Details:\nNumber: ${trip.bus?.number}\nCapacity: ${trip.bus?.capacity} Seats\nStatus: ${trip.status}`)
+          }}>
+            View Bus Details
+          </Button>
         </div>
       </div>
 
@@ -145,24 +140,27 @@ export function TrackPage() {
           {routePoints.length > 1 && (
             <Polyline 
               positions={routePoints} 
-              color="hsl(var(--primary))" 
+              color="#4f46e5" 
               weight={5} 
               opacity={0.7} 
             />
           )}
 
           {/* Draw Stops */}
-          {sortedStops.map((s: any, i: number) => (
-            <Marker 
-              key={s.stopId} 
-              position={[parseFloat(s.stop.latitude), parseFloat(s.stop.longitude)]}
-            >
-              <Popup>
-                <strong>{s.stop.name}</strong><br />
-                Stop {i + 1}
-              </Popup>
-            </Marker>
-          ))}
+          {sortedStops.map((s: any, i: number) => {
+            if (!s.stop || !s.stop.latitude || !s.stop.longitude) return null;
+            return (
+              <Marker 
+                key={s.stopId} 
+                position={[parseFloat(s.stop.latitude), parseFloat(s.stop.longitude)]}
+              >
+                <Popup>
+                  <strong>{s.stop.name}</strong><br />
+                  Stop {i + 1}
+                </Popup>
+              </Marker>
+            );
+          })}
 
           {/* Draw Live Bus */}
           {busLocation && (

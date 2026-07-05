@@ -26,6 +26,13 @@ export class UserRepository {
             data,
         });
     }
+
+    async updateRole(id: string, role: any) {
+        return prisma.user.update({
+            where: { id },
+            data: { role },
+        });
+    }
 }
 
 export const userRepository = new UserRepository();

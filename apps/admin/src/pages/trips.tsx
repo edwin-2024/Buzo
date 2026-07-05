@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Trash2, CalendarDays } from "lucide-react"
+import { Plus, Trash2, CalendarDays, Pencil } from "lucide-react"
 import { toast } from "sonner"
 
 import { tripsApi } from "@/api/trips"
@@ -32,6 +32,8 @@ import { Badge } from "@/components/ui/badge"
 export function TripsPage() {
   const queryClient = useQueryClient()
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({ 
     routeId: "", 
     busId: "", 
@@ -75,6 +77,50 @@ export function TripsPage() {
     },
     onError: () => toast.error("Failed to delete trip")
   })
+
+  const updateMutation = useMutation({
+    mutationFn: (data: {id: string, trip: any}) => tripsApi.update(data.id, data.trip),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trips"] })
+      setIsEditOpen(false)
+      setEditingId(null)
+      setFormData({ routeId: "", busId: "", departureTime: "", arrivalTime: "" })
+      toast.success("Trip updated successfully")
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to update trip")
+    }
+  })
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingId) return
+    updateMutation.mutate({
+      id: editingId,
+      trip: {
+        ...formData,
+        departureTime: new Date(formData.departureTime).toISOString(),
+        arrivalTime: new Date(formData.arrivalTime).toISOString(),
+      }
+    })
+  }
+
+  const openEdit = (trip: any) => {
+    // Format ISO string to YYYY-MM-DDThh:mm for the input
+    const formatForInput = (isoString: string) => {
+      const date = new Date(isoString);
+      return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+    
+    setEditingId(trip.id)
+    setFormData({
+      routeId: trip.routeId,
+      busId: trip.busId,
+      departureTime: formatForInput(trip.departureTime),
+      arrivalTime: formatForInput(trip.arrivalTime)
+    })
+    setIsEditOpen(true)
+  }
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,7 +166,7 @@ export function TripsPage() {
                   <Label htmlFor="routeId">Route</Label>
                   <select 
                     id="routeId"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex h-9 w-full rounded-md border border-input bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     value={formData.routeId}
                     onChange={(e) => setFormData({...formData, routeId: e.target.value})}
                     required
@@ -138,7 +184,7 @@ export function TripsPage() {
                   <Label htmlFor="busId">Bus</Label>
                   <select 
                     id="busId"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex h-9 w-full rounded-md border border-input bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     value={formData.busId}
                     onChange={(e) => setFormData({...formData, busId: e.target.value})}
                     required
@@ -183,9 +229,87 @@ export function TripsPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Trip</DialogTitle>
+              <DialogDescription>
+                Update bus assignment or schedule times.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="editRouteId">Route</Label>
+                  <select 
+                    id="editRouteId"
+                    className="flex h-9 w-full rounded-md border border-input bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={formData.routeId}
+                    onChange={(e) => setFormData({...formData, routeId: e.target.value})}
+                    required
+                  >
+                    <option value="" disabled>Select a route</option>
+                    {routes?.map((route: any) => (
+                      <option key={route.id} value={route.id}>
+                        {route.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="editBusId">Bus</Label>
+                  <select 
+                    id="editBusId"
+                    className="flex h-9 w-full rounded-md border border-input bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={formData.busId}
+                    onChange={(e) => setFormData({...formData, busId: e.target.value})}
+                    required
+                  >
+                    <option value="" disabled>Select a bus</option>
+                    {buses?.map((bus: any) => (
+                      <option key={bus.id} value={bus.id}>
+                        {bus.number} ({bus.capacity} seats)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="editDeparture">Departure</Label>
+                    <Input 
+                      id="editDeparture" 
+                      type="datetime-local"
+                      value={formData.departureTime}
+                      onChange={(e) => setFormData({...formData, departureTime: e.target.value})}
+                      required 
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="editArrival">Arrival</Label>
+                    <Input 
+                      id="editArrival" 
+                      type="datetime-local"
+                      value={formData.arrivalTime}
+                      onChange={(e) => setFormData({...formData, arrivalTime: e.target.value})}
+                      required 
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Updating..." : "Update Trip"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card overflow-x-auto pb-2">
         <Table>
           <TableHeader>
             <TableRow>
@@ -236,7 +360,16 @@ export function TripsPage() {
                       {trip.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
+                  <TableCell className="text-right space-x-2 whitespace-nowrap">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary"
+                      onClick={() => openEdit(trip)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Edit</span>
+                    </Button>
                     <Button 
                       variant="ghost" 
                       size="icon" 

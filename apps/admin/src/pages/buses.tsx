@@ -30,7 +30,9 @@ import { Badge } from "@/components/ui/badge"
 export function BusesPage() {
   const queryClient = useQueryClient()
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
   const [formData, setFormData] = useState({ number: "", capacity: "" })
+  const [editFormData, setEditFormData] = useState({ id: "", number: "", capacity: "" })
 
   const { data: buses, isLoading } = useQuery({
     queryKey: ["buses"],
@@ -53,6 +55,22 @@ export function BusesPage() {
     }
   })
 
+  const updateMutation = useMutation({
+    mutationFn: (bus: any) => busesApi.update(bus.id, {
+      number: bus.number,
+      capacity: parseInt(bus.capacity)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["buses"] })
+      setIsEditOpen(false)
+      setEditFormData({ id: "", number: "", capacity: "" })
+      toast.success("Bus updated successfully")
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to update bus")
+    }
+  })
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => busesApi.delete(id),
     onSuccess: () => {
@@ -65,6 +83,11 @@ export function BusesPage() {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
     createMutation.mutate(formData)
+  }
+
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault()
+    updateMutation.mutate(editFormData)
   }
 
   return (
@@ -119,9 +142,50 @@ export function BusesPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Bus</DialogTitle>
+              <DialogDescription>
+                Update bus registration number or capacity.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleUpdate}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-number">Bus Number (Registration)</Label>
+                  <Input 
+                    id="edit-number" 
+                    value={editFormData.number}
+                    onChange={(e) => setEditFormData({...editFormData, number: e.target.value})}
+                    required 
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-capacity">Seating Capacity</Label>
+                  <Input 
+                    id="edit-capacity" 
+                    type="number" 
+                    min="1"
+                    max="100"
+                    value={editFormData.capacity}
+                    onChange={(e) => setEditFormData({...editFormData, capacity: e.target.value})}
+                    required 
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Updating..." : "Update Bus"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card overflow-x-auto pb-2">
         <Table>
           <TableHeader>
             <TableRow>
@@ -160,7 +224,15 @@ export function BusesPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setEditFormData({ id: bus.id, number: bus.number, capacity: bus.capacity.toString() })
+                        setIsEditOpen(true)
+                      }}
+                    >
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Edit</span>
                     </Button>

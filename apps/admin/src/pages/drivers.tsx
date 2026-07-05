@@ -34,7 +34,7 @@ export function DriversPage() {
   const [isAssignOpen, setIsAssignOpen] = useState(false)
   const [selectedDriver, setSelectedDriver] = useState<any>(null)
   
-  const [formData, setFormData] = useState({ userId: "" })
+  const [formData, setFormData] = useState({ email: "" })
   const [assignData, setAssignData] = useState({ busId: "" })
 
   const { data: drivers, isLoading } = useQuery({
@@ -55,11 +55,11 @@ export function DriversPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drivers"] })
       setIsAddOpen(false)
-      setFormData({ userId: "" })
+      setFormData({ email: "" })
       toast.success("Driver created successfully")
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to create driver. Ensure the user ID is valid.")
+      toast.error(error.response?.data?.message || "Failed to create driver. Ensure the email is valid.")
     }
   })
 
@@ -119,16 +119,17 @@ export function DriversPage() {
             <form onSubmit={handleCreate}>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="userId">User ID</Label>
+                  <Label htmlFor="email">Email Address</Label>
                   <Input 
-                    id="userId" 
-                    value={formData.userId}
-                    onChange={(e) => setFormData({...formData, userId: e.target.value})}
-                    placeholder="User ID (cuid)" 
+                    id="email" 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="driver@buzo.com" 
                     required 
                   />
                   <p className="text-xs text-muted-foreground">
-                    Must be an existing user's ID.
+                    Must be an existing user's registered email.
                   </p>
                 </div>
               </div>
@@ -142,7 +143,7 @@ export function DriversPage() {
         </Dialog>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card overflow-x-auto pb-2">
         <Table>
           <TableHeader>
             <TableRow>
@@ -214,7 +215,7 @@ export function DriversPage() {
                               <Label htmlFor="busId">Bus</Label>
                               <select 
                                 id="busId"
-                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                className="flex h-9 w-full rounded-md border border-input bg-background text-foreground [&>option]:bg-background [&>option]:text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                 value={assignData.busId}
                                 onChange={(e) => setAssignData({ busId: e.target.value })}
                                 required

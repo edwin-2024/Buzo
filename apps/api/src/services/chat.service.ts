@@ -8,9 +8,10 @@ import { toolHandlers } from "../chat/handlers/registry";
 export class ChatService {
     async chat(
         message: string,
+        history?: { role: "user" | "assistant", content: string }[],
         userId?: string
     ) {
-        const action = await execute(message);
+        const action = await execute(message, history);
 
         // Gemini answered directly
         if (action.type === "text") {

@@ -7,7 +7,7 @@ const router = Router();
 router.post("/create-checkout-session", authMiddleware, async (req, res) => {
     try {
         const { tripId } = req.body;
-        const passengerId = req.user?.id;
+        const passengerId = req.user?.userId;
 
         if (!tripId || !passengerId) {
             return res.status(400).json({ error: "Missing tripId or authentication" });

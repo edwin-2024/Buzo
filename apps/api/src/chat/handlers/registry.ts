@@ -6,6 +6,8 @@ import { checkSeatsHandler } from "./checkSeats.handler";
 import { bookSeatHandler } from "./bookSeat.handler";
 import { listRoutesHandler } from "./listRoutes.handler";
 import { listStopsHandler } from "./listStops.handler";
+import { getDestinationWeatherHandler } from "./getDestinationWeather.handler";
+import { getTravelTipsHandler } from "./getTravelTips.handler";
 
 export const toolHandlers: Record<string, ToolHandler> = {
     searchTrips: searchTripsHandler,
@@ -14,4 +16,6 @@ export const toolHandlers: Record<string, ToolHandler> = {
     bookSeat: bookSeatHandler,
     listRoutes: listRoutesHandler,
     listStops: listStopsHandler,
+    getDestinationWeather: getDestinationWeatherHandler,
+    getTravelTips: getTravelTipsHandler,
 };

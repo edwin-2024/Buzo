@@ -39,6 +39,14 @@ export class BusLocationRepository {
             },
         });
     }
+
+    async findAll() {
+        return prisma.busLocation.findMany({
+            include: {
+                bus: true
+            }
+        });
+    }
 }
 
 export const busLocationRepository =

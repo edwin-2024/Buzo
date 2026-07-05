@@ -1,9 +1,9 @@
 import { useLocation } from "react-router-dom"
-import { Bell } from "lucide-react"
+import { Bell, Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
-export function Header() {
+export function Header({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }) {
   const location = useLocation()
   
   // Create a readable title from pathname
@@ -22,7 +22,13 @@ export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-x-4 border-b bg-background/80 px-4 shadow-sm backdrop-blur-md sm:gap-x-6 sm:px-6 lg:px-8">
       <div className="flex flex-1 items-center gap-x-4 lg:gap-x-6 justify-between">
-        <h1 className="text-xl font-semibold leading-7">{getPageTitle()}</h1>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(true)}>
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Open sidebar</span>
+          </Button>
+          <h1 className="text-xl font-semibold leading-7">{getPageTitle()}</h1>
+        </div>
         
         <div className="flex items-center gap-x-4 lg:gap-x-6">
           <Button variant="ghost" size="icon" className="text-muted-foreground">

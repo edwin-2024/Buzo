@@ -139,7 +139,8 @@ function getGeminiClient(): GoogleGenAI {
 async function geminiChat(
     prompt: string,
     systemPrompt: string,
-    tools?: ToolDef[]
+    tools?: ToolDef[],
+    history?: { role: string; content: string }[]
 ): Promise<LLMResponse> {
     const ai = getGeminiClient();
 
@@ -163,10 +164,18 @@ async function geminiChat(
         ];
     }
 
+    const contents = [
+        ...(history || []).map(m => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }]
+        })),
+        { role: "user", parts: [{ text: prompt }] }
+    ];
+
     const response =
         await ai.models.generateContent({
             model: "gemini-2.5-flash-lite",
-            contents: prompt,
+            contents: contents as any,
             config,
         });
 
@@ -204,19 +213,22 @@ const provider = env.LLM_PROVIDER;
 export async function callLLMWithTools(
     userMessage: string,
     systemPrompt: string,
-    tools: ToolDef[]
+    tools: ToolDef[],
+    history?: { role: string; content: string }[]
 ): Promise<LLMResponse> {
     if (provider === "gemini") {
         return geminiChat(
             userMessage,
             systemPrompt,
-            tools
+            tools,
+            history
         );
     }
 
     return ollamaChat(
         [
             { role: "system", content: systemPrompt },
+            ...(history || []),
             { role: "user", content: userMessage },
         ],
         tools.map((t) => ({

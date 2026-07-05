@@ -11,11 +11,12 @@ export const bookSeatHandler: ToolHandler = async (args, userId) => {
 
     const origin = args.origin as string;
     const destination = args.destination as string;
+    const date = args.date as string | undefined;
     const numberOfSeats = (args.numberOfSeats as number) || 1;
     const position = args.position as string | undefined;
     const sideBySide = args.sideBySide as boolean | undefined;
 
-    const trips = await tripService.searchTrips(origin, destination);
+    const trips = await tripService.searchTrips(origin, destination, date);
     if (trips.length === 0) {
         return { error: `No trips found from ${origin} to ${destination}.` };
     }
@@ -87,13 +88,16 @@ export const bookSeatHandler: ToolHandler = async (args, userId) => {
 
     // Book the seats
     const bookedIds = [];
+    const seatIds = [];
     for (const seat of selectedSeats) {
-        await bookingService.create(userId, {
-            tripId: trip.id,
-            seatId: seat.id,
-        });
+        seatIds.push(seat.id);
         bookedIds.push(seat.seatNumber);
     }
+
+    await bookingService.create(userId, {
+        tripId: trip.id,
+        seatIds: seatIds,
+    });
 
     return {
         message: "Booking successful!",
