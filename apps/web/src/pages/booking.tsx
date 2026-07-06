@@ -119,7 +119,6 @@ export function BookingPage() {
                        
                        // Skip rendering the middle aisle
                        const col = seat.seatNumber % 4
-                       const isRightSide = col === 3 || col === 0
                        
                        return (
                          <div key={seat.id} className={`${col === 3 ? "ml-8" : ""}`}>

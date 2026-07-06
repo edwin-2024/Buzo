@@ -16,7 +16,7 @@ export function DashboardPage() {
   const [currentStopIndex, setCurrentStopIndex] = useState(0)
   
   // Ref for the simulation interval
-  const simulationRef = useRef<NodeJS.Timeout | null>(null)
+  const simulationRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const socketRef = useRef<Socket | null>(null)
 
   const { data: trips, isLoading } = useQuery({
@@ -75,6 +75,20 @@ export function DashboardPage() {
       const nextStop = validStops[stopIndex + 1]?.stop;
       
       if (!nextStop) {
+        // Emit final exact location of the destination before stopping
+        const finalLocation = {
+          latitude: parseFloat(currentStop.latitude),
+          longitude: parseFloat(currentStop.longitude),
+          heading: 0,
+          speed: 0
+        };
+        api.patch(`/buses/${trip.busId}/location`, finalLocation).catch(console.error);
+        if (socketRef.current) {
+           socketRef.current.emit("busLocationUpdate", {
+              busId: trip.busId,
+              ...finalLocation
+           });
+        }
         stopSimulation(trip);
         return;
       }

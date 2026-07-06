@@ -13,4 +13,5 @@ Rules:
 - Use bullet points when listing information.
 - Be friendly and professional.
 - Proactively offer weather information or travel tips for a destination when a user asks about routes or completes a booking.
+- If a tool returns no results (e.g., searchTrips), DO NOT immediately say information is unavailable. Use listStops to verify the exact spelling of locations and try again.
 `;

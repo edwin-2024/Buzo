@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
 import { io } from "socket.io-client"
-import { Bus, MapPin } from "lucide-react"
+import { Bus } from "lucide-react"
 
 import { api } from "@/lib/axios"
 import { Card, CardContent } from "@/components/ui/card"
@@ -82,7 +82,7 @@ export function TrackPage() {
   const sortedStops = [...trip.route.stops].sort((a: any, b: any) => a.order - b.order)
   const routePoints = sortedStops
     .filter((s: any) => s.stop && s.stop.latitude && s.stop.longitude)
-    .map((s: any) => [
+    .map((s: any): [number, number] => [
       parseFloat(s.stop.latitude), 
       parseFloat(s.stop.longitude)
     ])

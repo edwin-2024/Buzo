@@ -8,9 +8,7 @@ import { useAuthStore } from "@/stores/auth.store"
 import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
+  CardContent
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"

@@ -13,9 +13,15 @@ interface Message {
 
 export function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = localStorage.getItem("buzo-chat-history");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
     { role: "assistant", content: "Hi there! I'm Buzo's AI assistant. I can help you find buses, check schedules, or answer questions about your trip. How can I help you today?" }
-  ])
+    ];
+  });
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -205,3 +211,6 @@ export function ChatbotWidget() {
     </>
   )
 }
+
+
+

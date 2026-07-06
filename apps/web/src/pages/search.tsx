@@ -1,14 +1,12 @@
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { Clock, MapPin, CreditCard, ChevronRight } from "lucide-react"
+import { Clock, MapPin, ChevronRight } from "lucide-react"
 
 import { api } from "@/lib/axios"
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"

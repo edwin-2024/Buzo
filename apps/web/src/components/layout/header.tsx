@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Bus, Map, Ticket, User, LogOut, Menu, X } from "lucide-react"
+import { Bus, LogOut, Menu, X } from "lucide-react"
 
 import { useAuthStore } from "@/stores/auth.store"
 import { Button } from "@/components/ui/button"
