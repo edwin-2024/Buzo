@@ -67,27 +67,45 @@ export function DashboardPage() {
 
     let stopIndex = 0;
     let step = 0;
-    const STEPS_BETWEEN_STOPS = 10;
     const INTERVAL_MS = 1000;
+    const SPEED_KMH = 60; // 60 km/h
+    const SPEED_KMS = SPEED_KMH / 3600; // km per second
+
+    // Helper to calculate distance between two coords in km
+    const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371; // Radius of the earth in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2); 
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+      return R * c; // Distance in km
+    };
+    
+    // We will calculate total steps for the current segment dynamically
+    let currentSegmentSteps = 0;
     
     simulationRef.current = setInterval(() => {
-      const currentStop = validStops[stopIndex].stop;
+      const currentStop = validStops[stopIndex]?.stop;
       const nextStop = validStops[stopIndex + 1]?.stop;
       
-      if (!nextStop) {
-        // Emit final exact location of the destination before stopping
-        const finalLocation = {
-          latitude: parseFloat(currentStop.latitude),
-          longitude: parseFloat(currentStop.longitude),
-          heading: 0,
-          speed: 0
-        };
-        api.patch(`/buses/${trip.busId}/location`, finalLocation).catch(console.error);
-        if (socketRef.current) {
-           socketRef.current.emit("busLocationUpdate", {
-              busId: trip.busId,
-              ...finalLocation
-           });
+      if (!nextStop || !currentStop) {
+        if (currentStop) {
+          const finalLocation = {
+            latitude: parseFloat(currentStop.latitude),
+            longitude: parseFloat(currentStop.longitude),
+            heading: 0,
+            speed: 0
+          };
+          api.patch(`/buses/${trip.busId}/location`, finalLocation).catch(console.error);
+          if (socketRef.current) {
+             socketRef.current.emit("busLocationUpdate", {
+                busId: trip.busId,
+                ...finalLocation
+             });
+          }
         }
         stopSimulation(trip);
         return;
@@ -98,8 +116,16 @@ export function DashboardPage() {
       const lat2 = parseFloat(nextStop.latitude);
       const lng2 = parseFloat(nextStop.longitude);
       
+      if (step === 0) {
+        // Calculate steps needed for this segment on the first tick of the segment
+        const distKm = getDistance(lat1, lng1, lat2, lng2);
+        // Interval is 1s, so we travel SPEED_KMS km per tick
+        // Minimum 1 step to avoid division by zero
+        currentSegmentSteps = Math.max(1, Math.ceil(distKm / SPEED_KMS));
+      }
+
       // Linear interpolation for smooth movement
-      const fraction = step / STEPS_BETWEEN_STOPS;
+      const fraction = step / currentSegmentSteps;
       const currentLat = lat1 + (lat2 - lat1) * fraction;
       const currentLng = lng1 + (lng2 - lng1) * fraction;
       
@@ -109,7 +135,7 @@ export function DashboardPage() {
         latitude: currentLat,
         longitude: currentLng,
         heading: heading,
-        speed: 45 // km/h
+        speed: SPEED_KMH
       }
       
       // Update DB and emit socket event
@@ -124,7 +150,7 @@ export function DashboardPage() {
 
       step++;
       
-      if (step >= STEPS_BETWEEN_STOPS) {
+      if (step >= currentSegmentSteps) {
          step = 0;
          stopIndex++;
          
