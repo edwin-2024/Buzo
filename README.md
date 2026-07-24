@@ -37,7 +37,7 @@ Buzo is structured as a **Turborepo** monorepo, optimized for fast builds and sh
 - JWT Authentication
 
 **AI Integration**
-- Vercel AI SDK
+- Custom LLM integration and streaming pipelines
 - Support for Local LLMs (Ollama - Qwen) and Cloud LLMs (Gemini)
 
 ## 📦 Project Structure
