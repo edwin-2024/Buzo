@@ -1,159 +1,119 @@
-# Turborepo starter
+# Buzo - Modern Bus Reservation & Live Tracking Platform
 
-This Turborepo starter is maintained by the Turborepo core team.
+Buzo is a comprehensive, real-time bus reservation and tracking system built with a modern, high-performance tech stack. It features a seamless booking experience, live GPS tracking of buses via WebSockets, and an intelligent AI chatbot that assists users with scheduling, booking, and travel queries.
 
-## Using this example
+## 🚀 Key Features
 
-Run the following command:
+### 🌟 For Passengers
+- **Smart Search & Booking:** Search for buses by origin, destination, and date. Select specific seats visually.
+- **AI Chatbot Assistant:** Powered by advanced LLMs (Ollama/Gemini), the assistant can check schedules, book seats, answer queries, and fetch real-time weather at your destination.
+- **Live Bus Tracking:** Watch your bus move in real-time on a live interactive map (Leaflet + Socket.io).
+- **Payment Integration:** Secure checkout process.
 
-```sh
-npx create-turbo@latest
+### 🚍 For Drivers
+- **Dedicated Dashboard:** Drivers have their own dedicated application to manage their assigned trips.
+- **Live Location Broadcasting:** The driver app continually broadcasts its GPS coordinates to the server, allowing passengers and admins to track the journey seamlessly.
+
+### 🛡️ For Administrators
+- **Full Management Suite:** Manage buses, routes, stops, drivers, and user bookings from a centralized dashboard.
+- **Fleet Overview:** Real-time visibility of the entire fleet.
+
+## 🛠️ Technology Stack
+
+Buzo is structured as a **Turborepo** monorepo, optimized for fast builds and shared local packages.
+
+**Frontend (Web, Admin, Driver Apps)**
+- React 19 / Vite
+- Tailwind CSS & shadcn/ui
+- Zustand (State Management)
+- React Router DOM
+- Leaflet & React-Leaflet (Maps)
+
+**Backend (API)**
+- Node.js & Express
+- Socket.io (Real-time bi-directional communication)
+- Prisma ORM (PostgreSQL via NeonDB)
+- Zod (Schema Validation)
+- JWT Authentication
+
+**AI Integration**
+- Vercel AI SDK
+- Support for Local LLMs (Ollama - Qwen) and Cloud LLMs (Gemini)
+
+## 📦 Project Structure
+
+```text
+Buzo/
+├── apps/
+│   ├── admin/      # Administrator Dashboard
+│   ├── api/        # Core Express Backend & Socket Server
+│   ├── driver/     # Driver App (Location broadcasting)
+│   └── web/        # Main Passenger Facing Website
+├── packages/
+│   ├── chatbot/    # AI Agent logic and tool definitions
+│   ├── db/         # Prisma schema and generated database client
+│   ├── env/        # Environment variable validation (Zod)
+│   └── ui/         # Shared UI components (shadcn)
 ```
 
-## What's inside?
+## 🚀 Getting Started
 
-This Turborepo includes the following packages/apps:
+### Prerequisites
+- [Bun](https://bun.sh/) (v1.x or higher)
+- PostgreSQL Database (or a [Neon](https://neon.tech/) account)
+- (Optional) [Ollama](https://ollama.com/) running locally for the local AI model.
 
-### Apps and Packages
+### Installation
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd Buzo
+   ```
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+2. **Install dependencies**
+   ```bash
+   bun install
+   ```
 
-### Utilities
+3. **Environment Setup**
+   Create a `.env` file in the root directory and populate it with your credentials:
+   ```env
+   DATABASE_URL="postgresql://user:password@host/db?sslmode=require"
+   JWT_SECRET="your-super-secret-key-at-least-32-characters"
+   GEMINI_API_KEY="your-gemini-key" # Optional if using Ollama
+   LLM_PROVIDER="ollama" # or "gemini"
+   OLLAMA_MODEL="qwen3:4b-instruct-2507-q4_K_M"
+   PORT=5000
+   CLIENT_URL="http://localhost:5173"
+   ```
 
-This Turborepo has some additional tools already setup for you:
+4. **Database Migration**
+   Push the schema to your database and generate the Prisma client:
+   ```bash
+   cd packages/db
+   bunx prisma db push
+   bunx prisma generate
+   ```
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+5. **Run the Development Servers**
+   From the root of the project, start all applications concurrently:
+   ```bash
+   bun run dev
+   ```
 
-### Build
+   This will start:
+   - **Passenger Web App:** `http://localhost:5173`
+   - **Admin Dashboard:** `http://localhost:5174`
+   - **Driver App:** `http://localhost:5175`
+   - **API Server:** `http://localhost:5000`
 
-To build all apps and packages, run the following command:
+## 🏗️ Architecture Highlights
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+- **Type Safety End-to-End:** 100% strict TypeScript configuration across the monorepo.
+- **Shared Code:** Reusable UI components (`@repo/ui`) and database schema (`@buzo/db`) drastically reduce boilerplate and ensure consistency across the three frontends.
+- **AI Tool Calling:** The chatbot utilizes LLM tool-calling (function calling) capabilities to directly interact with backend services (e.g., `bookSeat`, `checkSeats`, `getDestinationWeather`).
 
-```sh
-cd my-turborepo
-turbo build
-```
+## 📄 License
 
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo build
-bun dlx turbo build
-bun exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-bun exec turbo build --filter=docs
-bun exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-bun exec turbo dev
-bun exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-bun exec turbo dev --filter=web
-bun exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-bun exec turbo login
-bun exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-bun exec turbo link
-bun exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+This project is licensed under the MIT License.
