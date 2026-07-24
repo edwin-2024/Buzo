@@ -4,6 +4,7 @@ import { MessageCircle, X, Send, Bot, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { api } from "@/lib/axios"
+import { useAuthStore } from "@/stores/auth.store"
 
 interface Message {
   role: "user" | "assistant"
@@ -16,7 +17,7 @@ export function ChatbotWidget() {
   const [messages, setMessages] = useState<Message[]>(() => {
     const saved = localStorage.getItem("buzo-chat-history");
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try { return JSON.parse(saved); } catch {}
     }
     return [
     { role: "assistant", content: "Hi there! I'm Buzo's AI assistant. I can help you find buses, check schedules, or answer questions about your trip. How can I help you today?" }
@@ -52,34 +53,108 @@ export function ChatbotWidget() {
     setIsLoading(true)
 
     try {
-      const { data } = await api.post("/chat", { 
-        message: userMsg,
-        history
-      })
-
+      // Add an initial empty assistant message that we will stream into
       setMessages((prev) => [
         ...prev,
-        { 
-          role: "assistant", 
-          content: data.response || "I processed your request!",
-          toolData: data
+        { role: "assistant", content: "", toolData: null }
+      ]);
+
+      const token = useAuthStore.getState().token;
+      
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          message: userMsg,
+          history
+        })
+      });
+
+      if (response.status === 401) {
+        useAuthStore.getState().logout();
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { role: "assistant", content: "You need to be logged in to chat with me. Please log in first!" }
+        ]);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const dataStr = line.substring(6).trim();
+              if (dataStr === "[DONE]") break;
+
+              try {
+                const parsed = JSON.parse(dataStr);
+                
+                if (parsed.error) {
+                    setMessages((prev) => [
+                      ...prev.slice(0, -1),
+                      { role: "assistant", content: `Error: ${parsed.error}` }
+                    ]);
+                } else if (parsed.tool) {
+                    // Update the active message with tool data
+                    setMessages((prev) => {
+                        const newMsgs = [...prev];
+                        newMsgs[newMsgs.length - 1] = {
+                            ...newMsgs[newMsgs.length - 1],
+                            toolData: parsed
+                        };
+                        return newMsgs;
+                    });
+                } else if (parsed.response) {
+                    // Append text content
+                    setMessages((prev) => {
+                        const newMsgs = [...prev];
+                        const last = newMsgs[newMsgs.length - 1];
+                        newMsgs[newMsgs.length - 1] = {
+                            ...last,
+                            content: last.content + parsed.response
+                        };
+                        return newMsgs;
+                    });
+                }
+              } catch {
+                // ignore parse error for chunk
+              }
+            }
+          }
         }
-      ])
+      }
     } catch (error: any) {
       console.error("Chat error:", error)
-
-      // Check if it's a 401 auth error
-      if (error.response?.status === 401) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "You need to be logged in to chat with me. Please log in first!" }
-        ])
-      } else {
-        setMessages((prev) => [
+      setMessages((prev) => {
+        // If the last message is an empty assistant message, replace it
+        const newMsgs = [...prev];
+        if (newMsgs[newMsgs.length - 1].role === "assistant" && !newMsgs[newMsgs.length - 1].content) {
+          newMsgs[newMsgs.length - 1] = { role: "assistant", content: "Sorry, I'm having trouble right now. Please try again in a moment." };
+          return newMsgs;
+        }
+        return [
           ...prev,
           { role: "assistant", content: "Sorry, I'm having trouble right now. Please try again in a moment." }
-        ])
-      }
+        ];
+      });
     } finally {
       setIsLoading(false)
     }
@@ -125,7 +200,7 @@ export function ChatbotWidget() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((msg, idx) => (
+            {messages.filter((msg) => msg.role === "user" || msg.content).map((msg, idx) => (
               <div
                 key={idx}
                 className={`flex items-end gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
@@ -170,7 +245,7 @@ export function ChatbotWidget() {
               </div>
             ))}
 
-            {isLoading && (
+            {isLoading && (!messages.length || messages[messages.length - 1].role !== "assistant" || !messages[messages.length - 1].content) && (
               <div className="flex items-end gap-2">
                 <div className="flex-shrink-0 h-7 w-7 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
                   <Bot className="h-3.5 w-3.5" />

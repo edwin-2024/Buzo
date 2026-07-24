@@ -43,6 +43,19 @@ export function TrackPage() {
     enabled: !!tripId
   })
 
+  // Fetch initial bus location
+  useEffect(() => {
+    if (!trip?.busId) return;
+    api.get(`/buses/${trip.busId}/location`)
+      .then(res => {
+         if (res.data) {
+           setBusLocation({ lat: res.data.latitude, lng: res.data.longitude });
+           setLastUpdated(new Date(res.data.updatedAt || Date.now()));
+         }
+      })
+      .catch(console.error);
+  }, [trip?.busId]);
+
   // Setup Socket.IO connection
   useEffect(() => {
     if (!tripId || !trip?.busId) return
@@ -52,15 +65,20 @@ export function TrackPage() {
       // Pass token if needed for auth
     })
 
-    // Listen for general location updates, but filter by our busId
-    socket.on("bus-location-update", (data: { busId: string, location: { lat: number, lng: number } }) => {
-      if (data.busId === trip.busId) {
-        setBusLocation(data.location)
+    socket.on("connect", () => {
+      socket.emit("bus:join", trip.busId);
+    });
+
+    // Listen for room-based location updates
+    socket.on("bus:location", (data: any) => {
+      if (data && data.latitude && data.longitude) {
+        setBusLocation({ lat: data.latitude, lng: data.longitude })
         setLastUpdated(new Date())
       }
     })
 
     return () => {
+      socket.emit("bus:leave", trip.busId);
       socket.disconnect()
     }
   }, [tripId, trip])

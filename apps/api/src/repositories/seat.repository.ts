@@ -1,4 +1,4 @@
-import { prisma, Prisma } from "@buzo/db";
+import { prisma, Prisma, SeatStatus } from "@buzo/db";
 
 export class SeatRepository {
     async createMany(data: Prisma.SeatCreateManyInput[]) {
@@ -22,7 +22,7 @@ export class SeatRepository {
         });
     }
 
-    async updateStatus(id: string, status: Prisma.$Enums.SeatStatus) {
+    async updateStatus(id: string, status: SeatStatus) {
         return prisma.seat.update({
             where: { id },
             data: { status },

@@ -27,7 +27,7 @@ export class RouteController {
         next: NextFunction
     ) => {
         try {
-            const route = await routeService.findById(req.params.id);
+            const route = await routeService.findById(req.params.id as string);
 
             res.status(200).json(route);
         } catch (error) {
@@ -60,7 +60,7 @@ export class RouteController {
             const input = updateRouteSchema.parse(req.body);
 
             const route = await routeService.update(
-                req.params.id,
+                req.params.id as string,
                 input
             );
 
@@ -76,7 +76,7 @@ export class RouteController {
         next: NextFunction
     ) => {
         try {
-            await routeService.delete(req.params.id);
+            await routeService.delete(req.params.id as string);
 
             res.status(204).send();
         } catch (error) {

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { z } from "zod";
 
 config({
-    path: resolve(import.meta.dir, "../../../.env"),
+    path: resolve(import.meta.dirname, "../../../.env"),
 });
 
 const envSchema = z.object({

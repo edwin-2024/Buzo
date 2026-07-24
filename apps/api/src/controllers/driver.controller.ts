@@ -18,7 +18,7 @@ export class DriverController {
 
     getById = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            res.json(await driverService.findById(req.params.id));
+            res.json(await driverService.findById(req.params.id as string));
         } catch (err) {
             next(err);
         }
@@ -44,7 +44,7 @@ export class DriverController {
 
             res.json(
                 await driverService.assignBus(
-                    req.params.id,
+                    req.params.id as string,
                     input
                 )
             );
@@ -55,7 +55,7 @@ export class DriverController {
 
     delete = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            await driverService.delete(req.params.id);
+            await driverService.delete(req.params.id as string);
 
             res.sendStatus(204);
         } catch (err) {

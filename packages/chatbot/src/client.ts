@@ -200,6 +200,109 @@ async function geminiChat(
 }
 
 // ──────────────────────────────────────────
+// Streaming Providers
+// ──────────────────────────────────────────
+
+export async function* ollamaChatStream(
+    userMessage: string,
+    systemPrompt: string
+): AsyncGenerator<string, void, unknown> {
+    const url = env.OLLAMA_URL;
+    const model = env.OLLAMA_MODEL;
+
+    const res = await fetch(`${url}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            model,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userMessage },
+            ],
+            stream: true,
+        }),
+    });
+
+    if (!res.ok || !res.body) {
+        throw new Error(`Ollama request failed: ${res.status} ${res.statusText}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let insideThink = false;
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const data = JSON.parse(line);
+                    let content = data.message?.content ?? "";
+                    if (!content) continue;
+
+                    // Stateful think-tag filtering: suppress
+                    // content between <think> and </think>
+                    if (insideThink) {
+                        const endIdx = content.indexOf("</think>");
+                        if (endIdx === -1) continue; // still inside, skip
+                        content = content.slice(endIdx + 8);
+                        insideThink = false;
+                    }
+
+                    const startIdx = content.indexOf("<think>");
+                    if (startIdx !== -1) {
+                        const before = content.slice(0, startIdx);
+                        const afterThink = content.slice(startIdx + 7);
+                        const endIdx = afterThink.indexOf("</think>");
+                        if (endIdx !== -1) {
+                            content = before + afterThink.slice(endIdx + 8);
+                        } else {
+                            content = before;
+                            insideThink = true;
+                        }
+                    }
+
+                    if (content) {
+                        yield content;
+                    }
+                } catch (e) {
+                    // Ignore parse errors for incomplete lines
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+export async function* geminiChatStream(
+    userMessage: string,
+    systemPrompt: string
+): AsyncGenerator<string, void, unknown> {
+    const ai = getGeminiClient();
+
+    const responseStream = await ai.models.generateContentStream({
+        model: "gemini-2.5-flash-lite",
+        contents: [{ role: "user", parts: [{ text: userMessage }] }],
+        config: { systemInstruction: systemPrompt },
+    });
+
+    for await (const chunk of responseStream) {
+        if (chunk.text) {
+            yield chunk.text;
+        }
+    }
+}
+
+// ──────────────────────────────────────────
 // Public API (provider-agnostic)
 // ──────────────────────────────────────────
 
@@ -239,30 +342,15 @@ export async function callLLMWithTools(
 }
 
 /**
- * Send a message to the LLM for a plain text response (no tools).
+ * Send a message to the LLM for a plain text streaming response (no tools).
  */
-export async function callLLM(
+export async function* callLLMStream(
     userMessage: string,
     systemPrompt: string
-): Promise<string> {
+): AsyncGenerator<string, void, unknown> {
     if (provider === "gemini") {
-        const result = await geminiChat(
-            userMessage,
-            systemPrompt
-        );
-        return (
-            result.content ??
-            "I couldn't generate a response."
-        );
+        yield* geminiChatStream(userMessage, systemPrompt);
+    } else {
+        yield* ollamaChatStream(userMessage, systemPrompt);
     }
-
-    const result = await ollamaChat([
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userMessage },
-    ]);
-
-    return (
-        result.content ??
-        "I couldn't generate a response."
-    );
 }

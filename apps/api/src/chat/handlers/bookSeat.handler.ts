@@ -17,7 +17,7 @@ export const bookSeatHandler: ToolHandler = async (args, userId) => {
     const sideBySide = args.sideBySide as boolean | undefined;
 
     const trips = await tripService.searchTrips(origin, destination, date);
-    if (trips.length === 0) {
+    if (!trips.length || !trips[0]) {
         return { error: `No trips found from ${origin} to ${destination}.` };
     }
 
@@ -30,7 +30,7 @@ export const bookSeatHandler: ToolHandler = async (args, userId) => {
     }
 
     // Sort by seat number numerically (assuming format like "1", "2", "3" or similar)
-    availableSeats.sort((a, b) => parseInt(a.seatNumber) - parseInt(b.seatNumber));
+    availableSeats.sort((a, b) => a.seatNumber - b.seatNumber);
 
     // Position Filtering
     if (position) {
@@ -38,8 +38,8 @@ export const bookSeatHandler: ToolHandler = async (args, userId) => {
         const total = trip.bus.capacity;
         
         availableSeats = availableSeats.filter(s => {
-            const num = parseInt(s.seatNumber);
-            if (isNaN(num)) return true; // Fallback if seats are named like A1, A2
+            const num = s.seatNumber;
+            
 
             if (pos.includes("front")) return num <= Math.floor(total / 3);
             if (pos.includes("middle")) return num > Math.floor(total / 3) && num <= Math.floor((total / 3) * 2);
@@ -52,7 +52,7 @@ export const bookSeatHandler: ToolHandler = async (args, userId) => {
         return { error: `Not enough seats available in the requested position (${position}).` };
     }
 
-    let selectedSeats = [];
+    let selectedSeats: typeof availableSeats = [];
 
     // Side-by-Side Logic (Consecutive seat numbers)
     if (sideBySide && numberOfSeats > 1) {
@@ -63,8 +63,8 @@ export const bookSeatHandler: ToolHandler = async (args, userId) => {
             // Check if all seats in the slice are consecutive
             let isConsecutive = true;
             for (let j = 1; j < slice.length; j++) {
-                const prev = parseInt(slice[j - 1].seatNumber);
-                const curr = parseInt(slice[j].seatNumber);
+                const prev = slice[j - 1]!.seatNumber;
+                const curr = slice[j]!.seatNumber;
                 if (isNaN(prev) || isNaN(curr) || curr !== prev + 1) {
                     isConsecutive = false;
                     break;

@@ -100,12 +100,7 @@ export function DashboardPage() {
             speed: 0
           };
           api.patch(`/buses/${trip.busId}/location`, finalLocation).catch(console.error);
-          if (socketRef.current) {
-             socketRef.current.emit("busLocationUpdate", {
-                busId: trip.busId,
-                ...finalLocation
-             });
-          }
+
         }
         stopSimulation(trip);
         return;
@@ -140,13 +135,7 @@ export function DashboardPage() {
       
       // Update DB and emit socket event
       api.patch(`/buses/${trip.busId}/location`, locationData).catch(console.error)
-      
-      if (socketRef.current) {
-         socketRef.current.emit("busLocationUpdate", {
-            busId: trip.busId,
-            ...locationData
-         });
-      }
+
 
       step++;
       

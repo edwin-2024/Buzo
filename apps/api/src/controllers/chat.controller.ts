@@ -25,9 +25,35 @@ export class ChatController {
                     req.user?.userId
                 );
 
-            res.json(result);
+            // Set up SSE headers
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            
+            // If there's tool data, send it first as an event
+            if (result.tool) {
+                res.write(`data: ${JSON.stringify({ tool: result.tool, data: result.data })}\n\n`);
+            }
+
+            // Iterate through the stream and send chunks
+            if (result.stream) {
+                for await (const chunk of result.stream) {
+                    if (chunk) {
+                        res.write(`data: ${JSON.stringify({ response: chunk })}\n\n`);
+                    }
+                }
+            }
+
+            // Signal the end of the stream
+            res.write(`data: [DONE]\n\n`);
+            res.end();
         } catch (error) {
-            next(error);
+            if (!res.headersSent) {
+                next(error);
+            } else {
+                res.write(`data: ${JSON.stringify({ error: "Stream interrupted" })}\n\n`);
+                res.end();
+            }
         }
     };
 }

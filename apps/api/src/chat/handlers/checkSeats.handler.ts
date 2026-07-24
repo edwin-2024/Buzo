@@ -9,7 +9,7 @@ export const checkSeatsHandler: ToolHandler = async (args) => {
 
     const trips = await tripService.searchTrips(origin, destination);
 
-    if (trips.length === 0) {
+    if (!trips.length || !trips[0]) {
         return { message: "No trips found for this route." };
     }
 

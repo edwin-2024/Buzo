@@ -14,7 +14,7 @@ export class BusLocationController {
 
             const location =
                 await busLocationService.updateLocation(
-                    req.params.busId,
+                    req.params.busId as string,
                     input.latitude,
                     input.longitude,
                     input.heading,
@@ -35,7 +35,7 @@ export class BusLocationController {
         try {
             const location =
                 await busLocationService.getLocation(
-                    req.params.busId
+                    req.params.busId as string
                 );
 
             res.json(location);

@@ -28,7 +28,7 @@ export class BusController {
         next: NextFunction
     ) => {
         try {
-            const bus = await busService.findById(req.params.id);
+            const bus = await busService.findById(req.params.id as string);
 
             res.status(200).json(bus);
         } catch (error) {
@@ -61,7 +61,7 @@ export class BusController {
             const input = updateBusSchema.parse(req.body);
 
             const bus = await busService.update(
-                req.params.id,
+                req.params.id as string,
                 input
             );
 
@@ -77,7 +77,7 @@ export class BusController {
         next: NextFunction
     ) => {
         try {
-            await busService.delete(req.params.id);
+            await busService.delete(req.params.id as string);
 
             res.status(204).send();
         } catch (error) {

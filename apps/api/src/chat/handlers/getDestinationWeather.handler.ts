@@ -45,7 +45,7 @@ export const getDestinationWeatherHandler: ToolHandler = async (args) => {
             }
             
             const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchTerm)}&count=5`);
-            const geoData = await geoRes.json();
+            const geoData = await geoRes.json() as any;
             
             if (geoData.results && geoData.results.length > 0) {
                 // Try to find an Indian city first, otherwise fallback to the first result
@@ -68,7 +68,7 @@ export const getDestinationWeatherHandler: ToolHandler = async (args) => {
     // 3. Fetch real weather data
     try {
         const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-        const weatherData = await weatherRes.json();
+        const weatherData = await weatherRes.json() as any;
         
         const current = weatherData.current_weather;
         if (!current) {

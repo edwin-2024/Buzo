@@ -38,7 +38,7 @@ export class BookingController {
         next: NextFunction
     ) => {
         try {
-            const booking = await bookingService.findById(req.params.id);
+            const booking = await bookingService.findById(req.params.id as string);
 
             res.status(200).json(booking);
         } catch (error) {
@@ -71,7 +71,7 @@ export class BookingController {
         next: NextFunction
     ) => {
         try {
-            await bookingService.delete(req.params.id);
+            await bookingService.delete(req.params.id as string);
 
             res.sendStatus(204);
         } catch (error) {

@@ -1,6 +1,7 @@
 import { tripRepository } from "../repositories/trip.repository";
 import { busRepository } from "../repositories/bus.repository";
 import { routeRepository } from "../repositories/route.repository";
+import { SeatStatus } from "@buzo/db";
 
 import type {
     CreateTripInput,
@@ -58,7 +59,7 @@ export class TripService {
             (_, index) => ({
                 tripId: trip.id,
                 seatNumber: index + 1,
-                status: "AVAILABLE",
+                status: SeatStatus.AVAILABLE,
             })
         );
 
@@ -77,6 +78,39 @@ export class TripService {
         return tripRepository.update(id, input);
     }
 
+    /**
+     * Normalize a date string that might be a relative date
+     * (e.g. "tomorrow", "today") or a YYYY-MM-DD string.
+     * Returns YYYY-MM-DD or undefined if unparseable.
+     */
+    private normalizeDate(date: string): string | undefined {
+        const lower = date.trim().toLowerCase();
+
+        const now = new Date();
+
+        if (lower === "today") {
+            return now.toISOString().split("T")[0];
+        }
+        if (lower === "tomorrow") {
+            const d = new Date(now);
+            d.setDate(d.getDate() + 1);
+            return d.toISOString().split("T")[0];
+        }
+        if (lower === "day after tomorrow") {
+            const d = new Date(now);
+            d.setDate(d.getDate() + 2);
+            return d.toISOString().split("T")[0];
+        }
+
+        // Try to parse as a date string
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+            return parsed.toISOString().split("T")[0];
+        }
+
+        return undefined;
+    }
+
     async searchTrips(
         origin: string,
         destination: string,
@@ -86,6 +120,9 @@ export class TripService {
             origin,
             destination
         );
+
+        // Normalize date once
+        const normalizedDate = date ? this.normalizeDate(date) : undefined;
 
         return trips.filter((trip) => {
             // Check route match
@@ -104,11 +141,9 @@ export class TripService {
             }
             
             // Check date match if provided
-            if (date) {
-                // Trip departureTime is a Date object. Convert to YYYY-MM-DD in local time (or UTC)
-                // For simplicity, converting to ISO and extracting the date part
+            if (normalizedDate) {
                 const tripDate = trip.departureTime.toISOString().split('T')[0];
-                if (tripDate !== date) {
+                if (tripDate !== normalizedDate) {
                     return false;
                 }
             }

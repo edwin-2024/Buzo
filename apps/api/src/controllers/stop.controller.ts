@@ -27,7 +27,7 @@ export class StopController {
         next: NextFunction
     ) => {
         try {
-            const stop = await stopService.findById(req.params.id);
+            const stop = await stopService.findById(req.params.id as string);
 
             res.status(200).json(stop);
         } catch (error) {
@@ -60,7 +60,7 @@ export class StopController {
             const input = updateStopSchema.parse(req.body);
 
             const stop = await stopService.update(
-                req.params.id,
+                req.params.id as string,
                 input
             );
 
@@ -76,7 +76,7 @@ export class StopController {
         next: NextFunction
     ) => {
         try {
-            await stopService.delete(req.params.id);
+            await stopService.delete(req.params.id as string);
 
             res.status(204).send();
         } catch (error) {

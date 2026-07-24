@@ -47,7 +47,7 @@ export class TripController {
         next: NextFunction
     ) => {
         try {
-            const trip = await tripService.findById(req.params.id);
+            const trip = await tripService.findById(req.params.id as string);
 
             res.status(200).json(trip);
         } catch (error) {
@@ -80,7 +80,7 @@ export class TripController {
             const input = updateTripSchema.parse(req.body);
 
             const trip = await tripService.update(
-                req.params.id,
+                req.params.id as string,
                 input
             );
 
@@ -96,7 +96,7 @@ export class TripController {
         next: NextFunction
     ) => {
         try {
-            await tripService.delete(req.params.id);
+            await tripService.delete(req.params.id as string);
 
             res.sendStatus(204);
         } catch (error) {

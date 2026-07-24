@@ -1,10 +1,10 @@
-import { callLLM } from "./client";
+import { callLLMStream } from "./client";
 import { SYSTEM_PROMPT } from "./prompts";
 
-export async function generateResponse(
+export function generateResponseStream(
     question: string,
     toolResult: unknown
-) {
+): AsyncGenerator<string, void, unknown> {
     const prompt = `
 User Question: ${question}
 
@@ -24,5 +24,5 @@ Never say you couldn't find the information if the JSON contains data.
 If the JSON is null, an empty object, or an empty array, reply:
 "I couldn't find that information."`;
 
-    return callLLM(prompt, systemPrompt);
+    return callLLMStream(prompt, systemPrompt);
 }

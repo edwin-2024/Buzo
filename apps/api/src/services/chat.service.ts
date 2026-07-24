@@ -1,6 +1,6 @@
 import {
     execute,
-    generateResponse,
+    generateResponseStream,
 } from "@buzo/chatbot";
 
 import { toolHandlers } from "../chat/handlers/registry";
@@ -13,10 +13,15 @@ export class ChatService {
     ) {
         const action = await execute(message, history);
 
+
         // Gemini answered directly
         if (action.type === "text") {
+            // We can wrap the static text in a stream for consistency
+            async function* textStream() {
+                yield action.text;
+            }
             return {
-                response: action.text,
+                stream: textStream(),
             };
         }
 
@@ -36,20 +41,19 @@ export class ChatService {
                 error: error.message ?? "Tool execution failed",
             };
         }
+
         
-        const response =
-            await generateResponse(
-                message,
-                result
-            );
+        const stream = generateResponseStream(
+            message,
+            result
+        );
 
         return {
             tool: action.name,
             data: result,
-            response,
+            stream,
         };
     }
 }
 
-export const chatService =
-    new ChatService();
+export const chatService = new ChatService();

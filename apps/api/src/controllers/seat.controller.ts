@@ -10,7 +10,7 @@ export class SeatController {
     ) => {
         try {
             const seats = await seatRepository.findByTripId(
-                req.params.tripId
+                req.params.id as string
             );
 
             res.json(seats);
