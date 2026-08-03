@@ -21,8 +21,7 @@ The JSON below is the exact result returned from the database.
 It is authoritative.
 If it contains data, answer using ONLY that data.
 Never say you couldn't find the information if the JSON contains data.
-If the JSON is null, an empty object, or an empty array, reply:
-"I couldn't find that information."`;
+If the JSON is null, an empty object, or an empty array, gracefully inform the user that you couldn't find the requested trip/information. If they are searching for a trip, suggest that they verify the exact spelling of their locations and advise them to ask you to list the available stops. Do not invent or hallucinate any stops! Do not just say "I couldn't find that information."`;
 
     return callLLMStream(prompt, systemPrompt);
 }

@@ -35,39 +35,6 @@ export class TripRepository {
         destination: string
     ) {
         return prisma.trip.findMany({
-            where: {
-                AND: [
-                    {
-                        route: {
-                            stops: {
-                                some: {
-                                    stop: {
-                                        name: {
-                                            contains: origin,
-                                            mode: "insensitive",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    {
-                        route: {
-                            stops: {
-                                some: {
-                                    stop: {
-                                        name: {
-                                            contains: destination,
-                                            mode: "insensitive",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-
             include: {
                 bus: true,
 

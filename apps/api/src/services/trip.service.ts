@@ -111,11 +111,42 @@ export class TripService {
         return undefined;
     }
 
+    private isSimilar(a: string, b: string): boolean {
+        a = a.toLowerCase().replace(/[^a-z0-9]/g, '');
+        b = b.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (a.includes(b) || b.includes(a)) return true;
+        
+        // Simple Levenshtein distance
+        const matrix = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+        for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+        for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+        for (let i = 1; i <= a.length; i++) {
+            for (let j = 1; j <= b.length; j++) {
+                if (a[i - 1] === b[j - 1]) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1], // substitution
+                        matrix[i][j - 1],     // insertion
+                        matrix[i - 1][j]      // deletion
+                    ) + 1;
+                }
+            }
+        }
+        
+        // Allow up to 3 typos
+        return matrix[a.length][b.length] <= 3;
+    }
+
     async searchTrips(
-        origin: string,
-        destination: string,
+        origin?: string,
+        destination?: string,
         date?: string
     ) {
+        if (!origin || !destination) {
+            return [];
+        }
+
         const trips = await tripRepository.searchTrips(
             origin,
             destination
@@ -125,15 +156,13 @@ export class TripService {
         const normalizedDate = date ? this.normalizeDate(date) : undefined;
 
         return trips.filter((trip) => {
-            // Check route match
+            // Check route match using fuzzy search
             const originIndex = trip.route.stops.findIndex(
-                (s) =>
-                    s.stop.name.toLowerCase().includes(origin.toLowerCase())
+                (s) => this.isSimilar(s.stop.name, origin)
             );
 
             const destinationIndex = trip.route.stops.findIndex(
-                (s) =>
-                    s.stop.name.toLowerCase().includes(destination.toLowerCase())
+                (s) => this.isSimilar(s.stop.name, destination)
             );
 
             if (originIndex === -1 || destinationIndex === -1 || originIndex >= destinationIndex) {
