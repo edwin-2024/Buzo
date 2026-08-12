@@ -19,7 +19,7 @@ export function DashboardPage() {
   const simulationRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const socketRef = useRef<Socket | null>(null)
 
-  const { data: trips, isLoading } = useQuery({
+  const { data: trips, isLoading, isError } = useQuery({
     queryKey: ["my-trips"],
     queryFn: async () => {
       const { data } = await api.get("/trips/my-trips")
@@ -196,7 +196,7 @@ export function DashboardPage() {
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : trips?.length === 0 ? (
+        ) : isError || !trips || trips.length === 0 ? (
           <div className="bg-card border border-border/50 rounded-xl shadow-sm p-12 text-center">
             <div className="mx-auto w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
               <MapPin className="h-8 w-8 text-muted-foreground" />
