@@ -13,7 +13,8 @@ import {
   ChevronLeft, 
   AlertCircle,
   LocateFixed,
-  AlertTriangle
+  AlertTriangle,
+  Coffee
 } from "lucide-react"
 
 import { api } from "@/lib/axios"
@@ -31,7 +32,9 @@ L.Icon.Default.mergeOptions({
 });
 
 // Custom animated pulsing Bus Icon using HTML DivIcon
-const createBusDivIcon = (busNumber: string, isLive: boolean) => {
+const createBusDivIcon = (busNumber: string, isLive: boolean, isOnBreak: boolean = false) => {
+  const bgColor = isOnBreak ? "#d97706" : "#4f46e5";
+  const ringColor = isOnBreak ? "#f59e0b" : "#4f46e5";
   return L.divIcon({
     className: "custom-bus-marker",
     html: `
@@ -39,7 +42,7 @@ const createBusDivIcon = (busNumber: string, isLive: boolean) => {
         <div style="
           position: absolute;
           top: -24px;
-          background: #0f172a;
+          background: ${isOnBreak ? '#78350f' : '#0f172a'};
           color: #fff;
           font-size: 10px;
           font-weight: 700;
@@ -48,31 +51,41 @@ const createBusDivIcon = (busNumber: string, isLive: boolean) => {
           white-space: nowrap;
           box-shadow: 0 2px 6px rgba(0,0,0,0.3);
           border: 1px solid rgba(255,255,255,0.2);
+          display: flex;
+          align-items: center;
+          gap: 4px;
         ">
-          ${busNumber}
+          ${busNumber} ${isOnBreak ? '(PAUSED)' : ''}
         </div>
         <div style="
           width: 38px;
           height: 38px;
-          background: #4f46e5;
+          background: ${bgColor};
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           border: 3px solid #ffffff;
-          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.45);
+          box-shadow: 0 4px 12px ${isOnBreak ? 'rgba(217, 119, 6, 0.45)' : 'rgba(79, 70, 229, 0.45)'};
+          position: relative;
         ">
-          <svg style="width: 20px; height: 20px; color: white;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8m-8 4h8m-6 4h4m-8 6h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm2-2a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" />
-          </svg>
+          ${isOnBreak ? `
+            <svg style="width: 18px; height: 18px; color: white;" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            </svg>
+          ` : `
+            <svg style="width: 20px; height: 20px; color: white;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8m-8 4h8m-6 4h4m-8 6h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm2-2a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" />
+            </svg>
+          `}
         </div>
-        ${isLive ? `
+        ${isLive && !isOnBreak ? `
           <div style="
             position: absolute;
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            border: 2px solid #4f46e5;
+            border: 2px solid ${ringColor};
             top: -6px;
             animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
           "></div>
@@ -133,7 +146,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +\
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
     Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
@@ -142,6 +155,14 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 interface DelayInfo {
   delayMinutes: number;
+  reason?: string;
+  timestamp: string;
+}
+
+interface BreakInfo {
+  busId: string;
+  tripId?: string;
+  onBreak: boolean;
   reason?: string;
   timestamp: string;
 }
@@ -156,6 +177,8 @@ export function TrackPage() {
   const [isSocketConnected, setIsSocketConnected] = useState(false)
   const [followBus, setFollowBus] = useState(true)
   const [delayInfo, setDelayInfo] = useState<DelayInfo | null>(null)
+  const [isOnBreak, setIsOnBreak] = useState(false)
+  const [breakInfo, setBreakInfo] = useState<BreakInfo | null>(null)
 
   const { data: trip, isLoading } = useQuery({
     queryKey: ["trip", tripId],
@@ -227,10 +250,29 @@ export function TrackPage() {
       }
     })
 
+    // Listen for driver rest-break alerts
+    socket.on("bus:break", (data: BreakInfo) => {
+      if (data && typeof data.onBreak === "boolean") {
+        setIsOnBreak(data.onBreak);
+        setBreakInfo(data.onBreak ? data : null);
+        if (data.onBreak) {
+          toast.warning("Driver is on a rest break", {
+            description: data.reason || "Bus is temporarily paused.",
+            duration: 8000,
+          });
+        } else {
+          toast.success("Trip resumed: Bus is back on route!", {
+            duration: 5000,
+          });
+        }
+      }
+    })
+
     return () => {
       socket.emit("bus:leave", trip.busId);
       socket.off("bus:location");
       socket.off("bus:delay");
+      socket.off("bus:break");
       socket.disconnect()
     }
   }, [tripId, trip])
@@ -318,7 +360,11 @@ export function TrackPage() {
                   {isSocketConnected ? "Real-time Telemetry Active" : "Connecting to Bus..."}
                 </span>
                 <span>•</span>
-                {lastUpdated ? (\
+                {isOnBreak ? (
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                    <Coffee className="w-3.5 h-3.5" /> Driver on Rest Break
+                  </span>
+                ) : lastUpdated ? (
                   <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                     Updated {lastUpdated.toLocaleTimeString()}
                   </span>
@@ -350,6 +396,23 @@ export function TrackPage() {
           </div>
         </div>
       </div>
+
+      {/* Rest Break Banner */}
+      {isOnBreak && (
+        <div className="bg-amber-100 dark:bg-amber-950/60 border-b border-amber-300 dark:border-amber-700 px-6 py-2.5 flex items-center justify-between text-amber-900 dark:text-amber-200 text-sm font-medium z-10 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <Coffee className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0 animate-pulse" />
+            <span>
+              <strong>Driver on Break:</strong> Coach is temporarily paused {breakInfo?.reason ? `(${breakInfo.reason})` : 'for a rest break'}. Telemetry will resume shortly.
+            </span>
+          </div>
+          {breakInfo?.timestamp && (
+            <span className="text-xs text-amber-700 dark:text-amber-400 font-mono">
+              {new Date(breakInfo.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Delay Notification Banner */}
       {delayInfo && delayInfo.delayMinutes > 0 && (
@@ -436,13 +499,20 @@ export function TrackPage() {
           {busLocation && (
             <Marker 
               position={[busLocation.lat, busLocation.lng]} 
-              icon={createBusDivIcon(trip.bus?.number || "BUS", isSocketConnected)}
+              icon={createBusDivIcon(trip.bus?.number || "BUS", isSocketConnected, isOnBreak)}
               zIndexOffset={1000}
             >
               <Popup>
                 <div className="p-1">
                   <div className="text-xs font-bold uppercase text-primary">Live Bus Telemetry</div>
-                  <div className="font-black text-base">{trip.bus?.number}</div>
+                  <div className="font-black text-base flex items-center gap-2">
+                    {trip.bus?.number}
+                    {isOnBreak && (
+                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                        ON BREAK
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Latitude: {busLocation.lat.toFixed(4)}<br />
                     Longitude: {busLocation.lng.toFixed(4)}
@@ -461,6 +531,11 @@ export function TrackPage() {
                 <Navigation className="w-4 h-4 text-primary" /> Live Journey Status
               </CardTitle>
               <div className="flex items-center gap-1.5">
+                {isOnBreak && (
+                  <Badge variant="outline" className="font-bold text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/30 flex items-center gap-1">
+                    <Coffee className="w-2.5 h-2.5" /> ON BREAK
+                  </Badge>
+                )}
                 {delayInfo && delayInfo.delayMinutes > 0 && (
                   <Badge variant="destructive" className="font-bold text-[10px] animate-pulse">
                     +{delayInfo.delayMinutes}m DELAY
@@ -484,7 +559,7 @@ export function TrackPage() {
                     {nextStop.stop?.name || "Next Station"}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Approx. {distanceToNextStop.toFixed(1)} km away
+                    Approx. {distanceToNextStop.toFixed(1)} km away {isOnBreak ? "(Coach is paused)" : ""}
                   </div>
                 </div>
               ) : (
