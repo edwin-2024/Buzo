@@ -5,6 +5,7 @@ import { Check, ShieldCheck, Loader2, Armchair, Bus, Sparkles, AlertCircle } fro
 import { toast } from "sonner"
 
 import { api } from "@/lib/axios"
+import { resolveSeatPricing } from "@/lib/seat-pricing"
 import { useAuthStore } from "@/stores/auth.store"
 import { Button } from "@/components/ui/button"
 import {
@@ -96,19 +97,68 @@ export function BookingPage() {
     )
   }
 
-  // Helper seat pricing & category based on position
-  const getSeatCategory = (seatNumber: number) => {
-    const mod = seatNumber % 4
-    if (mod === 1 || mod === 0) {
-      return { type: "Window", price: 649, badge: "Window" }
-    }
-    return { type: "Aisle", price: 599, badge: "Aisle" }
-  }
-
   const selectedTotal = selectedSeats.reduce((sum, id) => {
     const s = seats?.find((seat: any) => seat.id === id)
-    return sum + (s ? getSeatCategory(s.seatNumber).price : 599)
+    if (!s) return sum
+    const pricing = resolveSeatPricing(s, s.seatNumber)
+    return sum + pricing.price
   }, 0)
+
+  const renderSeatButton = (num: number) => {
+    const seat = seats?.find((s: any) => s.seatNumber === num)
+    const isBooked = !seat || seat.status !== "AVAILABLE"
+    const isSelected = seat && selectedSeats.includes(seat.id)
+    const pricing = resolveSeatPricing(seat, num)
+    const isFrontRow = num >= 1 && num <= 8
+    const isWindow = (num % 4 === 1 || num % 4 === 0)
+
+    return (
+      <button
+        key={num}
+        type="button"
+        disabled={isBooked}
+        title={
+          isBooked
+            ? `Seat ${num} (Booked)`
+            : `Seat ${num} • ${pricing.name} (₹${pricing.price}) — Perks: ${pricing.perks.join(", ")}`
+        }
+        onClick={() => {
+          if (!seat) return
+          setSelectedSeats(prev =>
+            prev.includes(seat.id)
+              ? prev.filter(id => id !== seat.id)
+              : [...prev, seat.id]
+          )
+        }}
+        className={`
+          relative w-11 h-13 rounded-t-xl rounded-b-md border-2 font-bold text-xs transition-all duration-150 flex flex-col items-center justify-center
+          ${isBooked
+            ? "bg-muted/70 text-muted-foreground/40 border-muted cursor-not-allowed"
+            : isSelected
+              ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 ring-2 ring-primary/30"
+              : isFrontRow
+                ? "border-amber-400/80 bg-amber-500/5 hover:border-amber-500 text-foreground hover:scale-102 shadow-xs"
+                : "bg-background hover:border-primary/60 hover:bg-primary/5 border-input text-foreground hover:scale-102"}
+        `}
+      >
+        {/* Front row premium gold sparkle indicator */}
+        {isFrontRow && !isBooked && (
+          <span className="absolute top-1 left-1 flex items-center pointer-events-none" title="Premium Front">
+            <Sparkles className={`w-2.5 h-2.5 ${isSelected ? "text-primary-foreground/90 fill-primary-foreground/50" : "text-amber-500 fill-amber-500"}`} />
+          </span>
+        )}
+        {/* Window indicator blue dot */}
+        {isWindow && !isBooked && (
+          <span
+            className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full pointer-events-none ${isSelected ? "bg-white" : "bg-blue-500"}`}
+            title="Window Seat"
+          />
+        )}
+        <span className="leading-none">{num}</span>
+        <span className="text-[9px] font-normal opacity-75 mt-0.5">₹{pricing.price}</span>
+      </button>
+    )
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -148,7 +198,7 @@ export function BookingPage() {
                       <Armchair className="w-5 h-5 text-primary" /> Interactive Seat Selector
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      Choose your preferred seats. Window seats include panoramic views.
+                      Choose your preferred seats. Premium Front seats include extra legroom and priority deboarding.
                     </CardDescription>
                   </div>
                   <div className="hidden sm:flex bg-muted/60 p-1 rounded-xl text-xs font-medium border">
@@ -168,11 +218,23 @@ export function BookingPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                {/* Seat Legend */}
-                <div className="flex flex-wrap justify-center items-center gap-6 mb-8 text-xs font-medium bg-muted/20 py-3 px-4 rounded-xl border">
+                {/* Expanded Seat Legend */}
+                <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-5 mb-8 text-xs font-medium bg-muted/20 py-3 px-4 rounded-xl border">
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-md border-2 border-input bg-background shadow-xs"></div>
-                    <span>Available</span>
+                    <span>Available (Aisle ₹599)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-5 h-5 rounded-md border-2 border-input bg-background shadow-xs">
+                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    </div>
+                    <span>Window (₹649)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-5 h-5 rounded-md border-2 border-amber-400/80 bg-amber-500/10 shadow-xs flex items-center justify-center">
+                      <Sparkles className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
+                    </div>
+                    <span>Premium Front (₹699–₹749)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-[10px] shadow-sm">
@@ -183,10 +245,6 @@ export function BookingPage() {
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-md bg-muted border border-muted-foreground/20 opacity-60"></div>
                     <span>Booked</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
-                    <span>Window (₹649)</span>
                   </div>
                 </div>
                 
@@ -215,43 +273,7 @@ export function BookingPage() {
                          <div key={rowIndex} className="flex items-center justify-between gap-2 sm:gap-4 px-2">
                            {/* Left Pair */}
                            <div className="flex items-center gap-2 sm:gap-3">
-                             {rowSeats.slice(0, 2).map((num) => {
-                               const seat = seats?.find((s: any) => s.seatNumber === num)
-                               const isBooked = !seat || seat.status !== "AVAILABLE"
-                               const isSelected = seat && selectedSeats.includes(seat.id)
-                               const cat = getSeatCategory(num)
-
-                               return (
-                                 <button
-                                   key={num}
-                                   type="button"
-                                   disabled={isBooked}
-                                   title={`Seat ${num} (${cat.type}) - ₹${cat.price}`}
-                                   onClick={() => {
-                                     if (!seat) return
-                                     setSelectedSeats(prev => 
-                                       prev.includes(seat.id) 
-                                         ? prev.filter(id => id !== seat.id) 
-                                         : [...prev, seat.id]
-                                     )
-                                   }}
-                                   className={`
-                                     relative w-11 h-13 rounded-t-xl rounded-b-md border-2 font-bold text-xs transition-all duration-150 flex flex-col items-center justify-center
-                                     ${isBooked 
-                                       ? "bg-muted/70 text-muted-foreground/40 border-muted cursor-not-allowed" 
-                                       : isSelected 
-                                         ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 ring-2 ring-primary/30" 
-                                         : "bg-background hover:border-primary/60 hover:bg-primary/5 border-input text-foreground hover:scale-102"}
-                                   `}
-                                 >
-                                   {cat.type === "Window" && !isBooked && !isSelected && (
-                                     <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500/80"></span>
-                                   )}
-                                   <span className="leading-none">{num}</span>
-                                   <span className="text-[9px] font-normal opacity-75 mt-0.5">₹{cat.price}</span>
-                                 </button>
-                               )
-                             })}
+                             {rowSeats.slice(0, 2).map(renderSeatButton)}
                            </div>
 
                            {/* Aisle Spacer */}
@@ -261,43 +283,7 @@ export function BookingPage() {
 
                            {/* Right Pair */}
                            <div className="flex items-center gap-2 sm:gap-3">
-                             {rowSeats.slice(2, 4).map((num) => {
-                               const seat = seats?.find((s: any) => s.seatNumber === num)
-                               const isBooked = !seat || seat.status !== "AVAILABLE"
-                               const isSelected = seat && selectedSeats.includes(seat.id)
-                               const cat = getSeatCategory(num)
-
-                               return (
-                                 <button
-                                   key={num}
-                                   type="button"
-                                   disabled={isBooked}
-                                   title={`Seat ${num} (${cat.type}) - ₹${cat.price}`}
-                                   onClick={() => {
-                                     if (!seat) return
-                                     setSelectedSeats(prev => 
-                                       prev.includes(seat.id) 
-                                         ? prev.filter(id => id !== seat.id) 
-                                         : [...prev, seat.id]
-                                     )
-                                   }}
-                                   className={`
-                                     relative w-11 h-13 rounded-t-xl rounded-b-md border-2 font-bold text-xs transition-all duration-150 flex flex-col items-center justify-center
-                                     ${isBooked 
-                                       ? "bg-muted/70 text-muted-foreground/40 border-muted cursor-not-allowed" 
-                                       : isSelected 
-                                         ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 ring-2 ring-primary/30" 
-                                         : "bg-background hover:border-primary/60 hover:bg-primary/5 border-input text-foreground hover:scale-102"}
-                                   `}
-                                 >
-                                   {cat.type === "Window" && !isBooked && !isSelected && (
-                                     <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500/80"></span>
-                                   )}
-                                   <span className="leading-none">{num}</span>
-                                   <span className="text-[9px] font-normal opacity-75 mt-0.5">₹{cat.price}</span>
-                                 </button>
-                               )
-                             })}
+                             {rowSeats.slice(2, 4).map(renderSeatButton)}
                            </div>
                          </div>
                        )
@@ -354,15 +340,28 @@ export function BookingPage() {
                   <div className="text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b pb-2">
                     Payment Breakdown
                   </div>
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-3 text-sm">
                     {selectedSeats.map(id => {
                       const s = seats?.find((seat: any) => seat.id === id)
                       if (!s) return null
-                      const cat = getSeatCategory(s.seatNumber)
+                      const pricing = resolveSeatPricing(s, s.seatNumber)
+                      const isFront = s.seatNumber >= 1 && s.seatNumber <= 8
                       return (
-                        <div key={id} className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Seat {s.seatNumber} ({cat.type})</span>
-                          <span className="font-medium">₹{cat.price}</span>
+                        <div key={id} className="flex justify-between items-center py-1 border-b border-muted/50 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">Seat {s.seatNumber}</span>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 font-medium ${
+                                isFront
+                                  ? "border-amber-400/80 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                  : "border-muted-foreground/30 bg-muted/40 text-muted-foreground"
+                              }`}
+                            >
+                              {pricing.name}
+                            </Badge>
+                          </div>
+                          <span className="font-semibold text-foreground">₹{pricing.price}</span>
                         </div>
                       )
                     })}
@@ -433,13 +432,27 @@ export function BookingPage() {
               </div>
               
               <div className="pt-3 border-t space-y-2 text-sm">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-start">
                   <span className="text-muted-foreground">Selected Seats</span>
-                  <span className="font-bold">
-                    {selectedSeats.length > 0 
-                      ? selectedSeats.map(id => seats?.find((s:any) => s.id === id)?.seatNumber).join(', ') 
-                      : "None"}
-                  </span>
+                  <div className="text-right">
+                    {selectedSeats.length > 0 ? (
+                      <div className="flex flex-col items-end gap-1">
+                        {selectedSeats.map(id => {
+                          const s = seats?.find((seat: any) => seat.id === id)
+                          if (!s) return null
+                          const pricing = resolveSeatPricing(s, s.seatNumber)
+                          return (
+                            <div key={id} className="text-xs">
+                              <span className="font-bold text-foreground">Seat {s.seatNumber}</span>
+                              <span className="text-muted-foreground ml-1.5">(₹{pricing.price})</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <span className="font-bold">None</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Bus Number</span>
