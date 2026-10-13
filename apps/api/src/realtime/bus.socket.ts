@@ -1,5 +1,21 @@
 import { Server, Socket } from "socket.io";
 
+export interface BusDelayEvent {
+    busId: string;
+    tripId?: string;
+    delayMinutes: number;
+    reason?: string;
+    timestamp: string;
+}
+
+export interface BusBreakEvent {
+    busId: string;
+    tripId?: string;
+    onBreak: boolean;
+    reason?: string;
+    timestamp: string;
+}
+
 export function registerBusSocket(io: Server) {
     io.on("connection", (socket: Socket) => {
         console.log(`🔌 ${socket.id} connected`);
@@ -25,6 +41,36 @@ export function registerBusSocket(io: Server) {
                     lng: data.longitude
                 }
             });
+        });
+
+        socket.on("bus:delay", (data: { busId: string; tripId?: string; delayMinutes: number; reason?: string }) => {
+            if (!data || !data.busId || typeof data.delayMinutes !== "number" || data.delayMinutes < 0) {
+                return;
+            }
+            const payload: BusDelayEvent = {
+                busId: data.busId,
+                tripId: data.tripId,
+                delayMinutes: Math.floor(data.delayMinutes),
+                reason: data.reason || "Traffic delay",
+                timestamp: new Date().toISOString()
+            };
+            io.to(data.busId).emit("bus:delay", payload);
+            console.log(`⏱️ Delay reported for bus ${data.busId}: +${payload.delayMinutes} mins (${payload.reason})`);
+        });
+
+        socket.on("bus:break", (data: { busId: string; tripId?: string; onBreak: boolean; reason?: string }) => {
+            if (!data || !data.busId || typeof data.busId !== "string" || typeof data.onBreak !== "boolean") {
+                return;
+            }
+            const payload: BusBreakEvent = {
+                busId: data.busId,
+                tripId: data.tripId,
+                onBreak: data.onBreak,
+                reason: data.reason,
+                timestamp: new Date().toISOString()
+            };
+            io.to(data.busId).emit("bus:break", payload);
+            console.log(`☕ Bus ${data.busId} break status: ${payload.onBreak ? "ON_BREAK" : "RESUMED"}`);
         });
 
         socket.on("disconnect", () => {

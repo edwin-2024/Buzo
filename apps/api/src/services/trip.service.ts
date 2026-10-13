@@ -117,25 +117,36 @@ export class TripService {
         if (a.includes(b) || b.includes(a)) return true;
         
         // Simple Levenshtein distance
-        const matrix = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
-        for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
-        for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
-        for (let i = 1; i <= a.length; i++) {
-            for (let j = 1; j <= b.length; j++) {
+        const aLen = a.length;
+        const bLen = b.length;
+        const matrix: number[][] = Array.from({ length: aLen + 1 }, () => Array(bLen + 1).fill(0));
+        for (let i = 0; i <= aLen; i++) {
+            const row = matrix[i];
+            if (row) row[0] = i;
+        }
+        const firstRow = matrix[0];
+        if (firstRow) {
+            for (let j = 0; j <= bLen; j++) firstRow[j] = j;
+        }
+        for (let i = 1; i <= aLen; i++) {
+            const row = matrix[i];
+            const prevRow = matrix[i - 1];
+            if (!row || !prevRow) continue;
+            for (let j = 1; j <= bLen; j++) {
                 if (a[i - 1] === b[j - 1]) {
-                    matrix[i][j] = matrix[i - 1][j - 1];
+                    row[j] = prevRow[j - 1] ?? 0;
                 } else {
-                    matrix[i][j] = Math.min(
-                        matrix[i - 1][j - 1], // substitution
-                        matrix[i][j - 1],     // insertion
-                        matrix[i - 1][j]      // deletion
+                    row[j] = Math.min(
+                        prevRow[j - 1] ?? 0, // substitution
+                        row[j - 1] ?? 0,     // insertion
+                        prevRow[j] ?? 0      // deletion
                     ) + 1;
                 }
             }
         }
         
         // Allow up to 3 typos
-        return matrix[a.length][b.length] <= 3;
+        return (matrix[aLen]?.[bLen] ?? 99) <= 3;
     }
 
     async searchTrips(

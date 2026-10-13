@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { LogOut, Navigation, MapPin, Play, Square, Loader2 } from "lucide-react"
+import { LogOut, Navigation, MapPin, Play, Square, Loader2, Coffee } from "lucide-react"
 import { io, Socket } from "socket.io-client"
 
 import { useAuthStore } from "../stores/auth.store"
@@ -13,10 +13,12 @@ export function DashboardPage() {
   
   const [activeTrip, setActiveTrip] = useState<any | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
+  const [isOnBreak, setIsOnBreak] = useState(false)
   const [currentStopIndex, setCurrentStopIndex] = useState(0)
   
-  // Ref for the simulation interval
+  // Ref for the simulation interval and break state
   const simulationRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isOnBreakRef = useRef(false)
   const socketRef = useRef<Socket | null>(null)
 
   const { data: trips, isLoading } = useQuery({
@@ -44,9 +46,27 @@ export function DashboardPage() {
     navigate("/login")
   }
 
+  const toggleBreak = () => {
+    if (!activeTrip) return;
+    const nextState = !isOnBreak;
+    setIsOnBreak(nextState);
+    isOnBreakRef.current = nextState;
+
+    if (socketRef.current) {
+      socketRef.current.emit("bus:break", {
+        busId: activeTrip.busId,
+        tripId: activeTrip.id,
+        onBreak: nextState,
+        reason: nextState ? "Driver rest break" : undefined
+      });
+    }
+  };
+
   const startSimulation = (trip: any) => {
     setActiveTrip(trip)
     setIsSimulating(true)
+    setIsOnBreak(false)
+    isOnBreakRef.current = false
     setCurrentStopIndex(0)
     
     // Announce departure via API to update trip status
@@ -88,6 +108,11 @@ export function DashboardPage() {
     let currentSegmentSteps = 0;
     
     simulationRef.current = setInterval(() => {
+      // Pause advancing steps and skip location update API calls if driver is on break
+      if (isOnBreakRef.current) {
+        return;
+      }
+
       const currentStop = validStops[stopIndex]?.stop;
       const nextStop = validStops[stopIndex + 1]?.stop;
       
@@ -100,7 +125,6 @@ export function DashboardPage() {
             speed: 0
           };
           api.patch(`/buses/${trip.busId}/location`, finalLocation).catch(console.error);
-
         }
         stopSimulation(trip);
         return;
@@ -136,7 +160,6 @@ export function DashboardPage() {
       // Update DB and emit socket event
       api.patch(`/buses/${trip.busId}/location`, locationData).catch(console.error)
 
-
       step++;
       
       if (step >= currentSegmentSteps) {
@@ -156,6 +179,15 @@ export function DashboardPage() {
 
   const stopSimulation = (trip: any) => {
     if (simulationRef.current) clearInterval(simulationRef.current)
+    if (isOnBreakRef.current && socketRef.current && trip) {
+      socketRef.current.emit("bus:break", {
+        busId: trip.busId,
+        tripId: trip.id,
+        onBreak: false
+      });
+    }
+    setIsOnBreak(false)
+    isOnBreakRef.current = false
     setIsSimulating(false)
     setActiveTrip(null)
     
@@ -213,9 +245,16 @@ export function DashboardPage() {
                 <div key={trip.id} className={`bg-card rounded-xl shadow-sm overflow-hidden transition-all duration-200 border ${isActive ? 'border-primary ring-1 ring-primary' : 'border-border/50 hover:border-primary/50'}`}>
                   <div className={`px-5 py-4 border-b flex justify-between items-center ${isActive ? 'bg-primary/5' : 'bg-card'}`}>
                     <span className="font-semibold text-foreground">{trip.route.name}</span>
-                    <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border ${trip.status === 'IN_PROGRESS' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'}`}>
-                      {trip.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {isActive && isOnBreak && (
+                        <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 flex items-center gap-1">
+                          <Coffee className="h-3 w-3" /> On Break
+                        </span>
+                      )}
+                      <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border ${trip.status === 'IN_PROGRESS' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'}`}>
+                        {trip.status}
+                      </span>
+                    </div>
                   </div>
                   <div className="p-5 space-y-5">
                     <div className="flex justify-between text-sm">
@@ -228,6 +267,13 @@ export function DashboardPage() {
                         <p className="font-semibold text-foreground">{trip.bus?.number || trip.busId}</p>
                       </div>
                     </div>
+
+                    {isActive && isOnBreak && (
+                      <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center gap-2">
+                        <Coffee className="h-4 w-4 shrink-0 text-amber-600" />
+                        <span>Driver rest break active. GPS updates paused.</span>
+                      </div>
+                    )}
                     
                     <div className="space-y-2">
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Route Stops</p>
@@ -255,12 +301,32 @@ export function DashboardPage() {
                           <Play className="h-4 w-4" /> Start Simulation
                         </button>
                       ) : isActive ? (
-                        <button 
-                          onClick={() => stopSimulation(trip)}
-                          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-md font-medium transition-colors shadow-sm"
-                        >
-                          <Square className="h-4 w-4" /> End Trip
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={toggleBreak}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md font-medium transition-colors shadow-sm text-sm ${
+                              isOnBreak 
+                                ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                                : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/30"
+                            }`}
+                          >
+                            {isOnBreak ? (
+                              <>
+                                <Play className="h-4 w-4" /> Resume Driving
+                              </>
+                            ) : (
+                              <>
+                                <Coffee className="h-4 w-4" /> Take Break
+                              </>
+                            )}
+                          </button>
+                          <button 
+                            onClick={() => stopSimulation(trip)}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-md font-medium transition-colors shadow-sm text-sm"
+                          >
+                            <Square className="h-4 w-4" /> End Trip
+                          </button>
+                        </div>
                       ) : (
                         <button disabled className="w-full py-2.5 px-4 bg-secondary text-muted-foreground rounded-md font-medium cursor-not-allowed">
                           Another trip active

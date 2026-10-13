@@ -26,6 +26,126 @@ export interface ToolDef {
 }
 
 // ──────────────────────────────────────────
+// Groq Provider (OpenAI Compatible)
+// ──────────────────────────────────────────
+
+async function groqChat(
+    messages: { role: string; content: string }[],
+    tools?: { type: "function"; function: ToolDef }[]
+): Promise<LLMResponse> {
+    const apiKey = env.GROQ_API_KEY;
+    if (!apiKey) {
+        throw new Error("GROQ_API_KEY is required when LLM_PROVIDER is 'groq'");
+    }
+    const model = env.GROQ_MODEL || "qwen/qwen3.8-27b";
+
+    const body: Record<string, unknown> = {
+        model,
+        messages,
+        temperature: 0.2,
+    };
+
+    if (tools && tools.length > 0) {
+        body.tools = tools;
+    }
+
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Groq request failed: ${res.status} ${res.statusText} - ${errorText}`);
+    }
+
+    const data: any = await res.json();
+    const choice = data.choices?.[0];
+    const msg = choice?.message;
+
+    return {
+        content: msg?.content ? stripThinkTags(msg.content) : undefined,
+        toolCalls: msg?.tool_calls?.map((tc: any) => ({
+            name: tc.function.name,
+            arguments:
+                typeof tc.function.arguments === "string"
+                    ? JSON.parse(tc.function.arguments)
+                    : tc.function.arguments,
+        })),
+    };
+}
+
+export async function* groqChatStream(
+    userMessage: string,
+    systemPrompt: string
+): AsyncGenerator<string, void, unknown> {
+    const apiKey = env.GROQ_API_KEY;
+    if (!apiKey) {
+        throw new Error("GROQ_API_KEY is required when LLM_PROVIDER is 'groq'");
+    }
+    const model = env.GROQ_MODEL || "qwen/qwen3.8-27b";
+
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userMessage },
+            ],
+            stream: true,
+            temperature: 0.3,
+        }),
+    });
+
+    if (!res.ok || !res.body) {
+        throw new Error(`Groq stream failed: ${res.status} ${res.statusText}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith("data: ")) continue;
+                const payload = trimmed.slice(6);
+                if (payload === "[DONE]") return;
+
+                try {
+                    const parsed = JSON.parse(payload);
+                    const delta = parsed.choices?.[0]?.delta?.content;
+                    if (delta) {
+                        yield delta;
+                    }
+                } catch {
+                    // Ignore parse errors on incomplete chunk boundaries
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+// ──────────────────────────────────────────
 // Ollama Provider
 // ──────────────────────────────────────────
 
@@ -86,7 +206,7 @@ async function ollamaChat(
 }
 
 // ──────────────────────────────────────────
-// Gemini Provider (fallback)
+// Gemini Provider
 // ──────────────────────────────────────────
 
 const GEMINI_TYPE_MAP: Record<string, string> = {
@@ -98,7 +218,6 @@ const GEMINI_TYPE_MAP: Record<string, string> = {
     array: Type.ARRAY,
 };
 
-/** Convert lowercase JSON Schema types → Gemini's uppercase Type enum */
 function toGeminiSchema(schema: any): any {
     if (!schema) return schema;
     const result = { ...schema };
@@ -199,10 +318,6 @@ async function geminiChat(
     };
 }
 
-// ──────────────────────────────────────────
-// Streaming Providers
-// ──────────────────────────────────────────
-
 export async function* ollamaChatStream(
     userMessage: string,
     systemPrompt: string
@@ -248,11 +363,9 @@ export async function* ollamaChatStream(
                     let content = data.message?.content ?? "";
                     if (!content) continue;
 
-                    // Stateful think-tag filtering: suppress
-                    // content between <think> and </think>
                     if (insideThink) {
                         const endIdx = content.indexOf("</think>");
-                        if (endIdx === -1) continue; // still inside, skip
+                        if (endIdx === -1) continue;
                         content = content.slice(endIdx + 8);
                         insideThink = false;
                     }
@@ -273,7 +386,7 @@ export async function* ollamaChatStream(
                     if (content) {
                         yield content;
                     }
-                } catch (e) {
+                } catch {
                     // Ignore parse errors for incomplete lines
                 }
             }
@@ -319,6 +432,20 @@ export async function callLLMWithTools(
     tools: ToolDef[],
     history?: { role: string; content: string }[]
 ): Promise<LLMResponse> {
+    if (provider === "groq") {
+        return groqChat(
+            [
+                { role: "system", content: systemPrompt },
+                ...(history || []),
+                { role: "user", content: userMessage },
+            ],
+            tools.map((t) => ({
+                type: "function" as const,
+                function: t,
+            }))
+        );
+    }
+
     if (provider === "gemini") {
         return geminiChat(
             userMessage,
@@ -348,7 +475,9 @@ export async function* callLLMStream(
     userMessage: string,
     systemPrompt: string
 ): AsyncGenerator<string, void, unknown> {
-    if (provider === "gemini") {
+    if (provider === "groq") {
+        yield* groqChatStream(userMessage, systemPrompt);
+    } else if (provider === "gemini") {
         yield* geminiChatStream(userMessage, systemPrompt);
     } else {
         yield* ollamaChatStream(userMessage, systemPrompt);
