@@ -15,9 +15,15 @@ const envSchema = z.object({
 
     GEMINI_API_KEY: z.string().min(1).optional(),
 
+    GROQ_API_KEY: z.string().min(1).optional(),
+
+    GROQ_MODEL: z
+        .string()
+        .default("qwen/qwen3.8-27b"),
+
     LLM_PROVIDER: z
-        .enum(["ollama", "gemini"])
-        .default("ollama"),
+        .enum(["ollama", "gemini", "groq"])
+        .default("groq"),
 
     OLLAMA_URL: z
         .string()

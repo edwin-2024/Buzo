@@ -9,9 +9,8 @@ export class SeatController {
         next: NextFunction
     ) => {
         try {
-            const seats = await seatRepository.findByTripId(
-                req.params.id as string
-            );
+            const tripId = (req.params.tripId || req.params.id) as string;
+            const seats = await seatRepository.findByTripId(tripId);
 
             res.json(seats);
         } catch (err) {
