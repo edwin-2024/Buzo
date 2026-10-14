@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 
 import { bookingService } from "../services/booking.service";
+import { receiptService } from "../services/receipt.service";
 import { createBookingSchema } from "../validation/booking.schema";
 
 export class BookingController {
@@ -74,6 +75,76 @@ export class BookingController {
             await bookingService.delete(req.params.id as string);
 
             res.sendStatus(204);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    getReceipt = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) => {
+        try {
+            let booking;
+            try {
+                booking = await bookingService.findById(req.params.id as string);
+            } catch {
+                return res.status(404).json({ message: "Booking not found" });
+            }
+
+            if (!booking) {
+                return res.status(404).json({ message: "Booking not found" });
+            }
+
+            // Access control: passenger who owns booking or admin
+            if (booking.passengerId !== req.user.userId && req.user.role !== "ADMIN") {
+                return res.status(403).json({
+                    message: "Forbidden: You do not have permission to access this receipt",
+                });
+            }
+
+            const pdfBuffer = receiptService.generateReceiptPdf(booking);
+
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader(
+                "Content-Disposition",
+                `attachment; filename="buzo-receipt-${booking.id}.pdf"`
+            );
+            res.setHeader("Content-Length", pdfBuffer.length);
+
+            return res.status(200).send(pdfBuffer);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    emailReceipt = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) => {
+        try {
+            let booking;
+            try {
+                booking = await bookingService.findById(req.params.id as string);
+            } catch {
+                return res.status(404).json({ message: "Booking not found" });
+            }
+
+            if (!booking) {
+                return res.status(404).json({ message: "Booking not found" });
+            }
+
+            // Access control
+            if (booking.passengerId !== req.user.userId && req.user.role !== "ADMIN") {
+                return res.status(403).json({
+                    message: "Forbidden: You do not have permission to email this receipt",
+                });
+            }
+
+            const result = await receiptService.sendReceiptEmail(booking);
+            return res.status(200).json(result);
         } catch (error) {
             next(error);
         }
