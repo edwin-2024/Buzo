@@ -13,6 +13,9 @@ router.get(
     bookingController.getMyBookings
 );
 
+router.get("/:id/receipt", authMiddleware, bookingController.getReceipt);
+router.post("/:id/receipt/email", authMiddleware, bookingController.emailReceipt);
+
 router.get("/:id", bookingController.getById);
 
 router.post(

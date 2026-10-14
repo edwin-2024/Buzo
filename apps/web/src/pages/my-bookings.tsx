@@ -1,6 +1,7 @@
+import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
-import { Ticket, Map, Calendar, Trash2 } from "lucide-react"
+import { Ticket, Map, Calendar, Trash2, FileText, Mail, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { api } from "@/lib/axios"
@@ -17,6 +18,7 @@ export function MyBookingsPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const { data: bookings, isLoading } = useQuery({
     queryKey: ["my-bookings"],
@@ -35,6 +37,43 @@ export function MyBookingsPage() {
     },
     onError: () => toast.error("Failed to cancel booking")
   })
+
+  const emailReceiptMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const { data } = await api.post(`/bookings/${bookingId}/receipt/email`)
+      return data
+    },
+    onSuccess: () => {
+      toast.success("Receipt sent to your email!")
+    },
+    onError: () => {
+      toast.error("Failed to email receipt")
+    }
+  })
+
+  const handleDownloadReceipt = async (bookingId: string) => {
+    try {
+      setDownloadingId(bookingId)
+      const response = await api.get(`/bookings/${bookingId}/receipt`, {
+        responseType: "blob"
+      })
+      const blob = new Blob([response.data], { type: "application/pdf" })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `buzo-receipt-${bookingId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success("Receipt downloaded successfully")
+    } catch (error) {
+      console.error("Failed to download receipt:", error)
+      toast.error("Failed to download receipt")
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   if (!user) {
     return <div className="text-center py-12">Please log in to view your bookings.</div>
@@ -59,6 +98,9 @@ export function MyBookingsPage() {
   ) || []
 
   const renderBookingCard = (booking: any) => {
+    const isEligibleForReceipt =
+      booking.paymentStatus === "PAID" || booking.trip?.status === "COMPLETED"
+
     return (
       <Card key={booking.id} className="overflow-hidden transition-all hover:shadow-md border-border/50">
         <div className="md:flex">
@@ -110,12 +152,12 @@ export function MyBookingsPage() {
               </div>
             </div>
             
-            <div className="mt-6 flex items-center justify-between border-t pt-4">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t pt-4">
               <div className="font-mono text-xs text-muted-foreground">
                 ID: {booking.id}
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {booking.paymentStatus === "PENDING" && (
                   <Button 
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -123,6 +165,41 @@ export function MyBookingsPage() {
                   >
                     Pay Now
                   </Button>
+                )}
+
+                {isEligibleForReceipt && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="border-primary/20 text-primary hover:bg-primary/5"
+                      onClick={() => handleDownloadReceipt(booking.id)}
+                      disabled={downloadingId === booking.id}
+                    >
+                      {downloadingId === booking.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileText className="mr-2 h-4 w-4" />
+                      )}
+                      Download Invoice
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-border text-foreground hover:bg-muted"
+                      onClick={() => emailReceiptMutation.mutate(booking.id)}
+                      disabled={
+                        emailReceiptMutation.isPending &&
+                        emailReceiptMutation.variables === booking.id
+                      }
+                    >
+                      {emailReceiptMutation.isPending &&
+                      emailReceiptMutation.variables === booking.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Mail className="mr-2 h-4 w-4" />
+                      )}
+                      Email Receipt
+                    </Button>
+                  </>
                 )}
                 
                 {booking.paymentStatus === "PAID" && booking.trip.status !== "COMPLETED" && booking.trip.status !== "CANCELLED" && (
