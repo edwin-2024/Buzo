@@ -1,10 +1,24 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
-import { Ticket, Map, Calendar, Trash2, FileText, Mail, Loader2 } from "lucide-react"
+import { 
+  Ticket, 
+  Map, 
+  Calendar, 
+  Trash2, 
+  FileText, 
+  Mail, 
+  Loader2, 
+  Printer, 
+  X, 
+  ArrowRight, 
+  Bus, 
+  ShieldCheck 
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { api } from "@/lib/axios"
+import { resolveSeatPricing } from "@/lib/seat-pricing"
 import { useAuthStore } from "@/stores/auth.store"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +33,8 @@ export function MyBookingsPage() {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<any | null>(null)
+  const [boardingPassTarget, setBoardingPassTarget] = useState<any | null>(null)
 
   const { data: bookings, isLoading } = useQuery({
     queryKey: ["my-bookings"],
@@ -100,6 +116,7 @@ export function MyBookingsPage() {
   const renderBookingCard = (booking: any) => {
     const isEligibleForReceipt =
       booking.paymentStatus === "PAID" || booking.trip?.status === "COMPLETED"
+    const seatPricing = resolveSeatPricing(booking.seat, booking.seat?.seatNumber || 1)
 
     return (
       <Card key={booking.id} className="overflow-hidden transition-all hover:shadow-md border-border/50">
@@ -107,8 +124,12 @@ export function MyBookingsPage() {
           {/* Left Side: Ticket Visual */}
           <div className="bg-primary/5 p-6 border-b md:border-b-0 md:border-r border-dashed border-primary/20 md:w-48 flex flex-col items-center justify-center">
             <div className="text-center">
-              <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Seat</div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Seat</div>
               <div className="text-5xl font-black text-primary">{booking.seat?.seatNumber}</div>
+              <div className="text-[10px] font-semibold text-muted-foreground mt-1.5 px-2 py-0.5 rounded-full bg-background border truncate max-w-[150px]">
+                {seatPricing.name}
+              </div>
+              <div className="text-sm font-extrabold text-foreground mt-1">₹{seatPricing.price}</div>
             </div>
           </div>
           
@@ -202,6 +223,15 @@ export function MyBookingsPage() {
                   </>
                 )}
                 
+                {booking.paymentStatus === "PAID" && (
+                  <Button 
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs"
+                    onClick={() => setBoardingPassTarget(booking)}
+                  >
+                    <Ticket className="mr-2 h-4 w-4" /> Boarding Pass
+                  </Button>
+                )}
+
                 {booking.paymentStatus === "PAID" && booking.trip.status !== "COMPLETED" && booking.trip.status !== "CANCELLED" && (
                   <Button 
                     variant="outline" 
@@ -215,11 +245,7 @@ export function MyBookingsPage() {
                   <Button 
                     variant="ghost" 
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => {
-                      if (confirm("Are you sure you want to cancel this ticket? This action cannot be undone.")) {
-                        cancelMutation.mutate(booking.id)
-                      }
-                    }}
+                    onClick={() => setCancelTarget(booking)}
                     disabled={cancelMutation.isPending}
                   >
                     <Trash2 className="h-4 w-4 mr-2" /> Cancel Ticket
@@ -294,6 +320,307 @@ export function MyBookingsPage() {
           </>
         )}
       </div>
+
+      {/* Cancellation Confirmation Modal */}
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <Card className="max-w-md w-full border-2 border-destructive/20 shadow-2xl rounded-3xl overflow-hidden bg-card">
+            <div className="p-6 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-foreground">Cancel Ticket Reservation</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Are you sure you want to cancel your seat reservation for{" "}
+                  <strong className="text-foreground">Seat {cancelTarget.seat?.seatNumber}</strong> on{" "}
+                  <strong className="text-foreground">{cancelTarget.trip?.route?.name}</strong>?
+                </p>
+                <div className="mt-3 p-3 rounded-xl bg-muted/40 text-xs text-muted-foreground border">
+                  This seat will be immediately released back to the inventory and made available for other travelers.
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCancelTarget(null)}
+                  className="rounded-xl"
+                  disabled={cancelMutation.isPending}
+                >
+                  Keep Ticket
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    cancelMutation.mutate(cancelTarget.id, {
+                      onSettled: () => setCancelTarget(null)
+                    })
+                  }}
+                  disabled={cancelMutation.isPending}
+                  className="rounded-xl font-bold"
+                >
+                  {cancelMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  {cancelMutation.isPending ? "Cancelling..." : "Confirm Cancellation"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Digital Boarding Pass Modal */}
+      {boardingPassTarget && (() => {
+        const targetPricing = resolveSeatPricing(boardingPassTarget.seat, boardingPassTarget.seat?.seatNumber || 1)
+        const stops = boardingPassTarget.trip?.route?.stops || []
+        const origin = stops[0]?.stop?.name || "Departure Station"
+        const destination = stops[stops.length - 1]?.stop?.name || "Arrival Terminal"
+        const depTime = new Date(boardingPassTarget.trip?.departureTime)
+        const arrTime = new Date(boardingPassTarget.trip?.arrivalTime)
+        const isUpperDeck = (boardingPassTarget.seat?.seatNumber || 1) > 20
+        const passRef = `BZ-${boardingPassTarget.id.substring(0, 8).toUpperCase()}`
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #printable-boarding-pass, #printable-boarding-pass * {
+                  visibility: visible !important;
+                }
+                #printable-boarding-pass {
+                  position: fixed !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  max-width: 650px !important;
+                  margin: 0 auto !important;
+                  box-shadow: none !important;
+                  border: 2px solid #000 !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+            `}</style>
+
+            <div className="max-w-md w-full space-y-4 my-8">
+              {/* Ticket Card */}
+              <div 
+                id="printable-boarding-pass"
+                className="bg-card border-2 border-primary/20 rounded-3xl shadow-2xl overflow-hidden relative text-card-foreground"
+              >
+                {/* Header Banner */}
+                <div className="bg-primary text-primary-foreground p-5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
+                      <Bus className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-base tracking-wide leading-tight">BUZO EXPRESS</h3>
+                      <p className="text-[10px] text-primary-foreground/80 font-medium tracking-wider uppercase">
+                        Executive AC Luxury Coach
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex items-center gap-3">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-primary-foreground/75 block">Class</span>
+                      <span className="text-xs font-black tracking-wide bg-white/20 px-2 py-0.5 rounded-full">PREMIUM</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBoardingPassTarget(null)}
+                      className="no-print p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Journey Waypoints */}
+                <div className="p-6 bg-gradient-to-b from-primary/5 to-transparent border-b border-dashed border-border/70">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Origin</span>
+                      <h4 className="text-xl font-black text-foreground tracking-tight mt-0.5 truncate">{origin}</h4>
+                      <p className="text-xs font-bold text-primary mt-1">
+                        {depTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-center px-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-1">
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
+                      <span className="text-[9px] font-mono font-medium text-muted-foreground whitespace-nowrap">Direct Route</span>
+                    </div>
+
+                    <div className="flex-1 text-right">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Destination</span>
+                      <h4 className="text-xl font-black text-foreground tracking-tight mt-0.5 truncate">{destination}</h4>
+                      <p className="text-xs font-bold text-muted-foreground mt-1">
+                        {arrTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Perforated Notches */}
+                <div className="relative flex items-center justify-between px-4 -my-3 z-10">
+                  <div className="w-6 h-6 rounded-full bg-black/75 -ml-7 border-r-2 border-primary/20"></div>
+                  <div className="w-full border-t-2 border-dashed border-border/80"></div>
+                  <div className="w-6 h-6 rounded-full bg-black/75 -mr-7 border-l-2 border-primary/20"></div>
+                </div>
+
+                {/* Ticket Details Grid */}
+                <div className="p-6 grid grid-cols-3 gap-y-4 gap-x-2 text-xs border-b border-border/50">
+                  <div>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Passenger</span>
+                    <span className="font-bold text-foreground text-sm truncate block mt-0.5">{user?.name}</span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Seat & Tier</span>
+                    <span className="font-extrabold text-primary text-sm flex items-center gap-1 mt-0.5">
+                      Seat {boardingPassTarget.seat?.seatNumber}
+                      <span className="text-[9px] font-medium text-muted-foreground">({targetPricing.name.split(" ")[0]})</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Deck Layout</span>
+                    <span className="font-bold text-foreground text-sm block mt-0.5">
+                      {isUpperDeck ? "Upper Deck" : "Lower Deck"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Coach Bus</span>
+                    <span className="font-mono font-bold text-foreground text-sm block mt-0.5">
+                      {boardingPassTarget.trip?.bus?.number || "BUZO-01"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Departure Date</span>
+                    <span className="font-bold text-foreground text-xs block mt-0.5">
+                      {depTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Platform Bay</span>
+                    <span className="font-bold text-foreground text-sm block mt-0.5">
+                      Bay 04
+                    </span>
+                  </div>
+                </div>
+
+                {/* QR Code & Barcode Verification Area */}
+                <div className="p-6 bg-muted/20 flex flex-col items-center text-center space-y-4">
+                  {/* Dynamic SVG QR Code */}
+                  <div className="p-3 bg-white rounded-2xl shadow-sm border border-border/80">
+                    <svg width="130" height="130" viewBox="0 0 130 130" fill="none">
+                      {/* Top-Left Finder */}
+                      <rect x="10" y="10" width="35" height="35" rx="4" fill="#000000" />
+                      <rect x="15" y="15" width="25" height="25" rx="2" fill="#ffffff" />
+                      <rect x="20" y="20" width="15" height="15" rx="1" fill="#000000" />
+                      
+                      {/* Top-Right Finder */}
+                      <rect x="85" y="10" width="35" height="35" rx="4" fill="#000000" />
+                      <rect x="90" y="15" width="25" height="25" rx="2" fill="#ffffff" />
+                      <rect x="95" y="20" width="15" height="15" rx="1" fill="#000000" />
+                      
+                      {/* Bottom-Left Finder */}
+                      <rect x="10" y="85" width="35" height="35" rx="4" fill="#000000" />
+                      <rect x="15" y="90" width="25" height="25" rx="2" fill="#ffffff" />
+                      <rect x="20" y="95" width="15" height="15" rx="1" fill="#000000" />
+
+                      {/* Data dots matrix */}
+                      <rect x="52" y="12" width="6" height="6" fill="#000000" />
+                      <rect x="64" y="12" width="6" height="6" fill="#000000" />
+                      <rect x="72" y="20" width="6" height="6" fill="#000000" />
+                      <rect x="52" y="28" width="6" height="6" fill="#000000" />
+                      <rect x="68" y="32" width="6" height="6" fill="#000000" />
+                      <rect x="12" y="52" width="6" height="6" fill="#000000" />
+                      <rect x="28" y="52" width="6" height="6" fill="#000000" />
+                      <rect x="20" y="68" width="6" height="6" fill="#000000" />
+                      <rect x="36" y="60" width="6" height="6" fill="#000000" />
+                      <rect x="50" y="50" width="10" height="10" fill="#2563eb" rx="2" />
+                      <rect x="68" y="52" width="6" height="6" fill="#000000" />
+                      <rect x="80" y="60" width="6" height="6" fill="#000000" />
+                      <rect x="96" y="52" width="6" height="6" fill="#000000" />
+                      <rect x="112" y="68" width="6" height="6" fill="#000000" />
+                      <rect x="52" y="68" width="6" height="6" fill="#000000" />
+                      <rect x="64" y="74" width="6" height="6" fill="#000000" />
+                      <rect x="52" y="88" width="6" height="6" fill="#000000" />
+                      <rect x="68" y="94" width="6" height="6" fill="#000000" />
+                      <rect x="84" y="86" width="6" height="6" fill="#000000" />
+                      <rect x="100" y="92" width="6" height="6" fill="#000000" />
+                      <rect x="112" y="88" width="6" height="6" fill="#000000" />
+                      <rect x="92" y="106" width="6" height="6" fill="#000000" />
+                      <rect x="108" y="108" width="6" height="6" fill="#000000" />
+                      <rect x="60" y="112" width="6" height="6" fill="#000000" />
+                      <rect x="74" y="112" width="6" height="6" fill="#000000" />
+                    </svg>
+                  </div>
+
+                  {/* Optical Barcode Graphic */}
+                  <div className="w-full max-w-[280px] space-y-1">
+                    <div className="h-9 flex items-center justify-center gap-[2.5px] overflow-hidden opacity-85">
+                      {Array.from({ length: 48 }).map((_, i) => (
+                        <div 
+                          key={i} 
+                          className={`bg-foreground h-full ${
+                            i % 7 === 0 ? 'w-1.5' : i % 3 === 0 ? 'w-1' : 'w-0.5'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <div className="font-mono text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
+                      {passRef} • VERIFIED PAID
+                    </div>
+                    <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-green-600" />
+                      Present this digital boarding pass at the bus entrance
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons Below Ticket (Hidden on Print) */}
+              <div className="no-print flex items-center justify-between gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => window.print()}
+                  className="flex-1 bg-card hover:bg-secondary font-bold text-xs rounded-xl h-11"
+                >
+                  <Printer className="w-4 h-4 mr-2 text-primary" />
+                  Print / Save Pass
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/track?tripId=${boardingPassTarget.tripId}`)}
+                  className="flex-1 bg-card hover:bg-secondary font-bold text-xs rounded-xl h-11"
+                >
+                  <Map className="w-4 h-4 mr-2 text-primary" />
+                  Track Coach
+                </Button>
+
+                <Button
+                  onClick={() => setBoardingPassTarget(null)}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl h-11 px-5"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

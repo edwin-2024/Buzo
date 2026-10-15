@@ -26,7 +26,8 @@ export function BookingPage() {
   
   const [selectedSeats, setSelectedSeats] = useState<string[]>([])
   const [step, setStep] = useState<"SEAT" | "PAYMENT">("SEAT")
-  const [deck, setDeck] = useState<"LOWER" | "UPPER">("LOWER")
+  const [deck, setDeck] = useState<"ALL" | "LOWER" | "UPPER">("ALL")
+  const [hoveredSeat, setHoveredSeat] = useState<number | null>(null)
 
   const { data: trip, isLoading: tripLoading } = useQuery({
     queryKey: ["trip", tripId],
@@ -55,8 +56,8 @@ export function BookingPage() {
       return data
     },
     onSuccess: () => {
-      toast.success("Booking confirmed successfully!")
-      navigate("/my-bookings")
+      toast.success("Seats reserved! Complete payment to confirm your booking.")
+      navigate(`/payment?tripId=${tripId}`)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Failed to book seats. They might have been taken.")
@@ -117,10 +118,12 @@ export function BookingPage() {
         key={num}
         type="button"
         disabled={isBooked}
+        onMouseEnter={() => setHoveredSeat(num)}
+        onMouseLeave={() => setHoveredSeat(prev => prev === num ? null : prev)}
         title={
           isBooked
             ? `Seat ${num} (Booked)`
-            : `Seat ${num} • ${pricing.name} (₹${pricing.price}) — Perks: ${pricing.perks.join(", ")}`
+            : `Seat ${num} • ${pricing.name} (₹${pricing.price})`
         }
         onClick={() => {
           if (!seat) return
@@ -201,18 +204,27 @@ export function BookingPage() {
                       Choose your preferred seats. Premium Front seats include extra legroom and priority deboarding.
                     </CardDescription>
                   </div>
-                  <div className="hidden sm:flex bg-muted/60 p-1 rounded-xl text-xs font-medium border">
+                  <div className="hidden sm:flex bg-muted/60 p-1 rounded-xl text-xs font-medium border gap-0.5">
                     <button 
-                      onClick={() => setDeck("LOWER")}
-                      className={`px-3 py-1 rounded-lg transition-all ${deck === "LOWER" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                      type="button"
+                      onClick={() => setDeck("ALL")}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${deck === "ALL" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
                     >
-                      Lower Deck
+                      All Seats
                     </button>
                     <button 
-                      onClick={() => setDeck("UPPER")}
-                      className={`px-3 py-1 rounded-lg transition-all ${deck === "UPPER" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                      type="button"
+                      onClick={() => setDeck("LOWER")}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${deck === "LOWER" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
                     >
-                      Upper Deck
+                      Lower Deck (1–20)
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setDeck("UPPER")}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${deck === "UPPER" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Upper Deck (21–40)
                     </button>
                   </div>
                 </div>
@@ -247,6 +259,54 @@ export function BookingPage() {
                     <span>Booked</span>
                   </div>
                 </div>
+
+                {/* Interactive Seat Inspector Banner */}
+                {(() => {
+                  const activeNum = hoveredSeat || (selectedSeats.length > 0 ? seats?.find((s: any) => s.id === selectedSeats[selectedSeats.length - 1])?.seatNumber : null)
+                  if (!activeNum) {
+                    return (
+                      <div className="max-w-md mx-auto mb-4 p-3 rounded-2xl bg-muted/30 border border-dashed text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+                        <Armchair className="w-4 h-4 text-primary" />
+                        <span>Hover or tap any seat to inspect pricing, legroom, and perks</span>
+                      </div>
+                    )
+                  }
+                  const activeSeat = seats?.find((s: any) => s.seatNumber === activeNum)
+                  const isBooked = !activeSeat || activeSeat.status !== "AVAILABLE"
+                  const isSelected = activeSeat && selectedSeats.includes(activeSeat.id)
+                  const pricing = resolveSeatPricing(activeSeat, activeNum)
+
+                  return (
+                    <div className="max-w-md mx-auto mb-4 p-3.5 rounded-2xl bg-card border-2 border-primary/30 shadow-xs flex items-center justify-between animate-in fade-in">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-sm text-foreground">Seat {activeNum}</span>
+                          <Badge variant="outline" className="text-[10px] font-semibold bg-primary/10 text-primary border-primary/20">
+                            {pricing.name}
+                          </Badge>
+                          {isBooked ? (
+                            <Badge variant="destructive" className="text-[9px]">Booked</Badge>
+                          ) : isSelected ? (
+                            <Badge variant="default" className="text-[9px] bg-primary">Selected</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[9px] text-emerald-600 bg-emerald-500/10 border-emerald-500/20">Available</Badge>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap gap-1">
+                          {pricing.perks.map((perk, pI) => (
+                            <span key={pI} className="bg-muted px-1.5 py-0.5 rounded text-[10px]">
+                              • {perk}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right pl-3 border-l shrink-0">
+                        <span className="text-[10px] text-muted-foreground">Fare</span>
+                        <div className="text-lg font-black text-primary">₹{pricing.price}</div>
+                      </div>
+                    </div>
+                  )
+                })()}
                 
                 {/* Realistic Bus Chassis */}
                 <div className="max-w-md mx-auto bg-card border-2 border-border/80 rounded-4xl p-6 sm:p-8 pb-10 relative shadow-inner">
@@ -265,7 +325,12 @@ export function BookingPage() {
                    
                    {/* 2 + 2 Layout Grid */}
                    <div className="space-y-3.5">
-                     {Array.from({ length: 10 }).map((_, rowIndex) => {
+                     {(deck === "LOWER"
+                       ? [0, 1, 2, 3, 4]
+                       : deck === "UPPER"
+                       ? [5, 6, 7, 8, 9]
+                       : Array.from({ length: 10 }, (_, i) => i)
+                     ).map((rowIndex) => {
                        const seatStart = rowIndex * 4 + 1
                        const rowSeats = [seatStart, seatStart + 1, seatStart + 2, seatStart + 3]
 
@@ -467,6 +532,19 @@ export function BookingPage() {
           </Card>
         </div>
       </div>
+
+      {/* Floating Bottom Action Bar for Mobile */}
+      {step === "SEAT" && selectedSeats.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t p-3.5 px-6 shadow-2xl flex items-center justify-between sm:hidden animate-in slide-in-from-bottom">
+          <div>
+            <span className="text-xs text-muted-foreground font-medium">{selectedSeats.length} seat{selectedSeats.length > 1 ? "s" : ""} selected</span>
+            <div className="text-xl font-black text-primary leading-tight">₹{selectedTotal}</div>
+          </div>
+          <Button onClick={() => setStep("PAYMENT")} className="font-bold rounded-xl shadow-md">
+            Continue to Payment →
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
