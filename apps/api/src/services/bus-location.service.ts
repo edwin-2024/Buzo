@@ -26,6 +26,19 @@ export class BusLocationService {
             );
 
         getIO().to(busId).emit("bus:location", location);
+        getIO().emit("bus-location-update", {
+            busId,
+            location: {
+                lat: latitude,
+                lng: longitude
+            },
+            heading,
+            speed,
+            bus: {
+                number: bus.number
+            },
+            lastUpdated: location.updatedAt || new Date()
+        });
 
         return location;
     }
