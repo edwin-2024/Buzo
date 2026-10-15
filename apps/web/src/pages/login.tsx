@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { toast } from "sonner"
 
 import { useAuthStore } from "@/stores/auth.store"
@@ -7,7 +7,7 @@ import { api } from "@/lib/axios"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 
 export function LoginPage() {
   const [email, setEmail] = useState("")
@@ -65,6 +65,12 @@ export function LoginPage() {
             </Button>
           </form>
         </CardContent>
+        <CardFooter className="flex justify-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link to="/register" className="text-primary hover:underline ml-1 font-semibold">
+            Sign up
+          </Link>
+        </CardFooter>
       </Card>
     </div>
   )
