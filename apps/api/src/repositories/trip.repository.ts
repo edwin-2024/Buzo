@@ -5,7 +5,25 @@ export class TripRepository {
         return prisma.trip.findMany({
             include: {
                 bus: true,
-                route: true,
+                route: {
+                    include: {
+                        stops: {
+                            include: {
+                                stop: true,
+                            },
+                            orderBy: {
+                                order: "asc",
+                            },
+                        },
+                    },
+                },
+                seats: {
+                    select: {
+                        id: true,
+                        seatNumber: true,
+                        status: true,
+                    },
+                },
             },
             orderBy: {
                 departureTime: "asc",

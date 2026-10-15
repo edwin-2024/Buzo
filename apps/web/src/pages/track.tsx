@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet"
@@ -137,6 +137,21 @@ function MapController({ center }: { center: [number, number] }) {
   useEffect(() => {
     map.panTo(center, { animate: true, duration: 1 })
   }, [center, map])
+  return null
+}
+
+function MapFitBounds({ points }: { points: [number, number][] }) {
+  const map = useMap()
+  const hasFit = useRef(false)
+
+  useEffect(() => {
+    if (!hasFit.current && points.length > 1) {
+      const bounds = L.latLngBounds(points)
+      map.fitBounds(bounds, { padding: [60, 60] })
+      hasFit.current = true
+    }
+  }, [points, map])
+
   return null
 }
 
@@ -298,7 +313,7 @@ export function TrackPage() {
   }
 
   // Extract stops and construct GeoJSON coordinate line
-  const routeStops = trip.route?.routeStops || []
+  const routeStops = trip.route?.stops || trip.route?.routeStops || []
   const sortedStops = [...routeStops].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   
   const routePoints: [number, number][] = sortedStops
@@ -335,6 +350,13 @@ export function TrackPage() {
     // Assume average speed 30 km/h in city traffic
     estimatedMinutes = Math.max(1, Math.round((distanceToNextStop / 30) * 60))
   }
+
+  const totalDistance = sortedStops.length > 0
+    ? (sortedStops[sortedStops.length - 1]?.distanceFromStart || 0)
+    : 0
+  const progressPercent = (totalDistance > 0 && nextStop?.distanceFromStart !== undefined)
+    ? Math.min(100, Math.round((nextStop.distanceFromStart / totalDistance) * 100))
+    : 0
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden">
@@ -442,6 +464,9 @@ export function TrackPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
+          {/* Fit bounds to entire route on initial load */}
+          <MapFitBounds points={routePoints} />
+
           {followBus && busLocation && <MapController center={[busLocation.lat, busLocation.lng]} />}
           
           {/* High-visibility Route Polyline */}
@@ -472,6 +497,9 @@ export function TrackPage() {
             const isFirst = idx === 0;
             const isLast = idx === sortedStops.length - 1;
 
+            const distFromBus = busLocation ? calculateDistance(busLocation.lat, busLocation.lng, lat, lng) : null
+            const etaFromBus = distFromBus ? Math.max(1, Math.round((distFromBus / 30) * 60)) : null
+
             return (
               <Marker 
                 key={s.stopId || idx} 
@@ -479,14 +507,17 @@ export function TrackPage() {
                 icon={createStopDivIcon(s.order || idx + 1, isFirst, isLast)}
               >
                 <Popup className="custom-stop-popup">
-                  <div className="p-1">
-                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      {isFirst ? "Origin Station" : isLast ? "Final Destination" : `Stop ${s.order || idx + 1}`}
+                  <div className="p-1 min-w-[160px]">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                      <span>{isFirst ? "Origin Station" : isLast ? "Final Destination" : `Stop ${s.order || idx + 1}`}</span>
+                      {s.distanceFromStart !== undefined && (
+                        <span className="font-mono text-[9px]">{s.distanceFromStart} km</span>
+                      )}
                     </div>
                     <div className="font-extrabold text-sm text-foreground mt-0.5">{s.stop.name}</div>
-                    {s.distanceFromStart !== undefined && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {s.distanceFromStart} km from origin
+                    {etaFromBus !== null && (
+                      <div className="text-xs text-primary font-semibold mt-1.5 pt-1 border-t flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> ~{etaFromBus} min away ({distFromBus?.toFixed(1)} km)
                       </div>
                     )}
                   </div>
@@ -565,6 +596,22 @@ export function TrackPage() {
               ) : (
                 <div className="bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground">
                   Bus GPS is awaiting movement updates along the route.
+                </div>
+              )}
+
+              {/* Route Completion Progress */}
+              {totalDistance > 0 && (
+                <div className="space-y-1 bg-muted/20 p-2.5 rounded-xl border">
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span>Route Completed</span>
+                    <span className="font-mono text-primary font-bold">{progressPercent}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(4, progressPercent)}%` }}
+                    />
+                  </div>
                 </div>
               )}
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { LogOut, Navigation, MapPin, Play, Square, Loader2, Coffee } from "lucide-react"
+import { LogOut, Navigation, MapPin, Play, Square, Loader2, Coffee, AlertTriangle, Clock, CheckCircle2, Gauge } from "lucide-react"
 import { io, Socket } from "socket.io-client"
 
 import { useAuthStore } from "../stores/auth.store"
@@ -15,6 +15,7 @@ export function DashboardPage() {
   const [isSimulating, setIsSimulating] = useState(false)
   const [isOnBreak, setIsOnBreak] = useState(false)
   const [currentStopIndex, setCurrentStopIndex] = useState(0)
+  const [activeDelay, setActiveDelay] = useState<{ minutes: number; reason: string } | null>(null)
   
   // Ref for the simulation interval and break state
   const simulationRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -62,12 +63,34 @@ export function DashboardPage() {
     }
   };
 
+  const handleReportDelay = (minutes: number, reason: string) => {
+    if (!activeTrip || !socketRef.current) return;
+    if (minutes <= 0) {
+      setActiveDelay(null);
+      socketRef.current.emit("bus:delay", {
+        busId: activeTrip.busId,
+        tripId: activeTrip.id,
+        delayMinutes: 0,
+        reason: "On time"
+      });
+    } else {
+      setActiveDelay({ minutes, reason });
+      socketRef.current.emit("bus:delay", {
+        busId: activeTrip.busId,
+        tripId: activeTrip.id,
+        delayMinutes: minutes,
+        reason
+      });
+    }
+  };
+
   const startSimulation = (trip: any) => {
     setActiveTrip(trip)
     setIsSimulating(true)
     setIsOnBreak(false)
     isOnBreakRef.current = false
     setCurrentStopIndex(0)
+    setActiveDelay(null)
     
     // Announce departure via API to update trip status
     api.patch(`/trips/${trip.id}`, { status: "IN_PROGRESS" }).catch(console.error);
@@ -186,6 +209,15 @@ export function DashboardPage() {
         onBreak: false
       });
     }
+    if (activeDelay && socketRef.current && trip) {
+      socketRef.current.emit("bus:delay", {
+        busId: trip.busId,
+        tripId: trip.id,
+        delayMinutes: 0,
+        reason: "Trip completed"
+      });
+    }
+    setActiveDelay(null)
     setIsOnBreak(false)
     isOnBreakRef.current = false
     setIsSimulating(false)
@@ -268,10 +300,94 @@ export function DashboardPage() {
                       </div>
                     </div>
 
+                    {isActive && (
+                      <div className="p-3 bg-secondary/60 rounded-lg border border-border/50 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <Gauge className="h-4 w-4 text-primary" />
+                          <div>
+                            <span className="text-muted-foreground">Speed: </span>
+                            <span className="font-bold text-foreground">{isOnBreak ? "0 km/h (Paused)" : "60 km/h"}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 font-medium">
+                          <span className="text-muted-foreground">Next:</span>
+                          <span className="font-semibold text-foreground truncate max-w-[120px]">
+                            {trip.route.stops[currentStopIndex + 1]?.stop?.name || "Terminal"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {isActive && isOnBreak && (
                       <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center gap-2">
                         <Coffee className="h-4 w-4 shrink-0 text-amber-600" />
                         <span>Driver rest break active. GPS updates paused.</span>
+                      </div>
+                    )}
+
+                    {isActive && (
+                      <div className="space-y-2 pt-1 border-t border-border/50">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> Broadcast Delay
+                          </p>
+                          {activeDelay ? (
+                            <button
+                              onClick={() => handleReportDelay(0, "On time")}
+                              className="text-[11px] font-bold text-green-600 hover:text-green-700 flex items-center gap-1"
+                            >
+                              <CheckCircle2 className="h-3 w-3" /> Mark On-Time
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-green-600 font-medium">Schedule On-Time</span>
+                          )}
+                        </div>
+
+                        {activeDelay && (
+                          <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 truncate">
+                              <AlertTriangle className="h-4 w-4 shrink-0" />
+                              <span>Live: <strong>+{activeDelay.minutes}m</strong> ({activeDelay.reason})</span>
+                            </div>
+                            <button
+                              onClick={() => handleReportDelay(0, "On time")}
+                              className="px-2 py-0.5 rounded bg-background border text-[10px] font-bold shadow-xs hover:bg-secondary cursor-pointer"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-4 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleReportDelay(5, "Heavy Traffic")}
+                            className="px-1.5 py-1.5 rounded-md text-[11px] font-semibold bg-secondary/80 hover:bg-primary hover:text-primary-foreground border border-border/50 transition-colors cursor-pointer"
+                          >
+                            +5m Traffic
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReportDelay(10, "Signal Delays")}
+                            className="px-1.5 py-1.5 rounded-md text-[11px] font-semibold bg-secondary/80 hover:bg-primary hover:text-primary-foreground border border-border/50 transition-colors cursor-pointer"
+                          >
+                            +10m Signal
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReportDelay(15, "Road Work")}
+                            className="px-1.5 py-1.5 rounded-md text-[11px] font-semibold bg-secondary/80 hover:bg-primary hover:text-primary-foreground border border-border/50 transition-colors cursor-pointer"
+                          >
+                            +15m Road
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReportDelay(30, "Detour / Weather")}
+                            className="px-1.5 py-1.5 rounded-md text-[11px] font-semibold bg-secondary/80 hover:bg-primary hover:text-primary-foreground border border-border/50 transition-colors cursor-pointer"
+                          >
+                            +30m Detour
+                          </button>
+                        </div>
                       </div>
                     )}
                     
