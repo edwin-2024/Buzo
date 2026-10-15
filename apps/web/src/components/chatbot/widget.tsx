@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react"
-import { MessageCircle, X, Send, Bot, User, Loader2 } from "lucide-react"
+import { MessageCircle, X, Send, Bot, User, Loader2, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,43 @@ interface Message {
   toolData?: any
 }
 
+const INITIAL_MESSAGE: Message = {
+  role: "assistant",
+  content: "Hi there! I'm Buzo's AI assistant. I can help you find buses, check schedules, or answer questions about your trip. How can I help you today?"
+}
+
+function renderFormattedContent(text: string) {
+  if (!text) return null
+  const lines = text.split("\n")
+  return lines.map((line, lIdx) => {
+    const isBullet = line.trim().startsWith("- ") || line.trim().startsWith("* ")
+    const content = isBullet ? line.trim().substring(2) : line
+
+    const parts = content.split(/(\*\*.*?\*\*)/g)
+    const parsedLine = parts.map((part, pIdx) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={pIdx} className="font-extrabold">{part.slice(2, -2)}</strong>
+      }
+      return part
+    })
+
+    if (isBullet) {
+      return (
+        <div key={lIdx} className="flex items-start gap-1.5 my-0.5 pl-1">
+          <span className="text-primary font-black">•</span>
+          <span>{parsedLine}</span>
+        </div>
+      )
+    }
+
+    return (
+      <div key={lIdx} className={line.trim() === "" ? "h-2" : "my-0.5"}>
+        {parsedLine}
+      </div>
+    )
+  })
+}
+
 export function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -19,9 +56,7 @@ export function ChatbotWidget() {
     if (saved) {
       try { return JSON.parse(saved); } catch {}
     }
-    return [
-    { role: "assistant", content: "Hi there! I'm Buzo's AI assistant. I can help you find buses, check schedules, or answer questions about your trip. How can I help you today?" }
-    ];
+    return [INITIAL_MESSAGE];
   });
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -31,6 +66,18 @@ export function ChatbotWidget() {
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [])
+
+  // Persist messages to localStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("buzo-chat-history", JSON.stringify(messages))
+    }
+  }, [messages])
+
+  const handleClearHistory = () => {
+    localStorage.removeItem("buzo-chat-history")
+    setMessages([INITIAL_MESSAGE])
+  }
 
   useEffect(() => {
     scrollToBottom()
@@ -166,8 +213,8 @@ export function ChatbotWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 flex items-center justify-center text-white transition-all duration-300 hover:scale-110 hover:shadow-primary/40"
-          style={{ background: "linear-gradient(135deg, hsl(15 90% 58%), hsl(25 95% 50%))" }}
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 flex items-center justify-center text-white transition-all duration-300 hover:scale-110 bg-gradient-to-tr from-primary to-blue-600 shadow-primary/30"
+          title="Ask Buzo AI Assistant"
         >
           <MessageCircle className="h-6 w-6" />
         </button>
@@ -175,27 +222,36 @@ export function ChatbotWidget() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-[360px] sm:w-[400px] h-[520px] max-h-[calc(100vh-48px)] bg-card border border-border/60 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden">
+        <div className="fixed bottom-6 right-6 w-[360px] sm:w-[400px] h-[520px] max-h-[calc(100vh-48px)] bg-card border border-border/80 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden">
           {/* Header */}
-          <div
-            className="p-4 flex items-center justify-between text-white"
-            style={{ background: "linear-gradient(135deg, hsl(15 90% 58%), hsl(25 95% 50%))" }}
-          >
+          <div className="p-4 flex items-center justify-between text-white bg-gradient-to-r from-primary to-blue-600 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-2 rounded-full">
                 <Bot className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-bold text-sm">Buzo Assistant</h3>
-                <p className="text-xs opacity-80">Powered by AI</p>
+                <h3 className="font-bold text-sm">Buzo AI Assistant</h3>
+                <p className="text-xs opacity-85">Real-time Bus & Route Queries</p>
               </div>
             </div>
-            <button
-              className="text-white/80 hover:text-white hover:bg-white/20 rounded-full h-8 w-8 flex items-center justify-center transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full h-8 w-8 flex items-center justify-center transition-colors"
+                onClick={handleClearHistory}
+                title="Clear conversation"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full h-8 w-8 flex items-center justify-center transition-colors"
+                onClick={() => setIsOpen(false)}
+                title="Close chat"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -206,16 +262,37 @@ export function ChatbotWidget() {
                 className={`flex items-end gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
               >
                 <div className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center ${msg.role === "user" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
-                  {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                  {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5 text-primary" />}
                 </div>
                 <div
-                  className={`rounded-2xl px-4 py-2.5 max-w-[78%] text-sm leading-relaxed ${
+                  className={`rounded-2xl px-4 py-2.5 max-w-[80%] text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === "user"
                       ? "bg-primary text-white rounded-br-sm"
                       : "bg-muted text-foreground rounded-bl-sm"
                   }`}
                 >
-                  {msg.content}
+                  {renderFormattedContent(msg.content)}
+                  
+                  {/* Starter suggestions if only initial message is present */}
+                  {idx === 0 && messages.length <= 1 && (
+                    <div className="pt-3 mt-2 border-t border-border/50 flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold text-muted-foreground">Quick questions:</span>
+                      {[
+                        "What buses are running to Airport?",
+                        "Find buses leaving from Majestic",
+                        "Check available seats on next trip"
+                      ].map((prompt, pIdx) => (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => setInput(prompt)}
+                          className="text-xs bg-background hover:bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded-xl transition-all text-left font-medium shadow-2xs"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   
                   {/* Payment Button Injection */}
                   {msg.toolData?.tool === "bookSeat" && msg.toolData?.data?.tripId && !msg.toolData?.data?.error && (

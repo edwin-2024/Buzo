@@ -150,6 +150,38 @@ export function HomePage() {
                     <Bus className="w-4 h-4" /> Find Available Buses
                   </Button>
                 </form>
+
+                {/* Popular Quick Route Shortcuts */}
+                {stops && stops.length > 0 && (
+                  <div className="pt-4 mt-4 border-t flex flex-wrap items-center gap-2 text-xs text-left">
+                    <span className="text-muted-foreground font-semibold flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" /> Quick Routes:
+                    </span>
+                    {[
+                      { label: "Airport Express", from: "Mekhri Circle", to: "Kempegowda International Airport" },
+                      { label: "Tech Express", from: "Majestic", to: "Whitefield" },
+                      { label: "City Commute", from: "Electronic City", to: "Majestic" }
+                    ].map((route, rIdx) => {
+                      const fromStop = stops.find((s: any) => s.name.toLowerCase().includes(route.from.toLowerCase()))
+                      const toStop = stops.find((s: any) => s.name.toLowerCase().includes(route.to.toLowerCase()))
+                      if (!fromStop || !toStop) return null
+
+                      return (
+                        <button
+                          key={rIdx}
+                          type="button"
+                          onClick={() => {
+                            setSource(fromStop.id)
+                            setDestination(toStop.id)
+                          }}
+                          className="px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-medium transition-colors text-left"
+                        >
+                          {route.label} ({fromStop.name} → {toStop.name})
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
