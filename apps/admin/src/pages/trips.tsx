@@ -377,7 +377,7 @@ export function TripsPage() {
       </div>
 
       {/* Trips Table */}
-      <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
+      <div className="rounded-xl card-linear overflow-hidden shadow-xs tabular-nums">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

@@ -1,12 +1,15 @@
+import { useState } from "react"
 import { useLocation } from "react-router-dom"
-import { Bell, Menu, ExternalLink, ShieldCheck, Radio } from "lucide-react"
+import { Bell, Menu, ExternalLink, Radio, Search, ShieldCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/stores/auth.store"
+import { CommandPalette } from "@/components/command-palette"
 
 export function Header({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }) {
   const location = useLocation()
   const user = useAuthStore((state) => state.user)
+  const [commandOpen, setCommandOpen] = useState(false)
   
   // Create a readable title from pathname
   const getPageTitle = () => {
@@ -40,6 +43,20 @@ export function Header({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) =>
         </div>
         
         <div className="flex items-center gap-x-3 sm:gap-x-4">
+          {/* Linear / Raycast Style Quick Command Palette Trigger */}
+          <button
+            type="button"
+            onClick={() => setCommandOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground text-xs font-mono border border-border/70 transition-all cursor-pointer shadow-2xs hover:border-primary/40 active:scale-95"
+            title="Open Command Palette (⌘K)"
+          >
+            <Search className="w-3.5 h-3.5 text-primary" />
+            <span className="hidden md:inline">Quick Jump</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-background text-[10px] font-mono border border-border/80 text-muted-foreground">
+              ⌘K
+            </kbd>
+          </button>
+
           {/* Live System Beacon */}
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
             <Radio className="w-3 h-3 animate-pulse" />
@@ -86,6 +103,7 @@ export function Header({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) =>
           </div>
         </div>
       </div>
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </header>
   )
 }

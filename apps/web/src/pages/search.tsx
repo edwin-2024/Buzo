@@ -329,7 +329,7 @@ export function SearchPage() {
               const seatPercent = Math.round((availableSeats / totalSeats) * 100)
 
               return (
-                <Card key={trip.id} className="group hover:border-primary/50 transition-all duration-200 rounded-3xl overflow-hidden shadow-xs hover:shadow-xl border-border/80 bg-card/90 backdrop-blur-sm">
+                <Card key={trip.id} className="group card-luxe card-luxe-hover rounded-3xl overflow-hidden border-white/10">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                       {/* Bus Info & Times */}

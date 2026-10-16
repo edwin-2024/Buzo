@@ -108,19 +108,22 @@ export function HomePage() {
 
             {/* Main Headline */}
             <div className="space-y-4">
-              <h1 className="text-4xl font-black tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground leading-[1.1]">
-                Intercity Bus Travel,{" "}
-                <span className="bg-gradient-to-r from-primary via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                  Elevated.
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold tracking-wide uppercase">
+                <Sparkles className="w-3.5 h-3.5" /> First-Class Intercity Mobility
+              </div>
+              <h1 className="text-4xl font-black tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground leading-[1.08]">
+                Executive Coach Travel,{" "}
+                <span className="bg-gradient-to-r from-sky-400 via-primary to-indigo-400 bg-clip-text text-transparent">
+                  Redefined.
                 </span>
               </h1>
               <p className="mx-auto max-w-[680px] text-muted-foreground text-base sm:text-lg md:text-xl font-normal leading-relaxed">
-                Reserve your preferred seat interactively, track coach movements via live GPS radar, and glide to your destination with executive comfort.
+                Experience airline-grade executive comfort on the road. Select your exact recliner, follow satellite GPS radar, and glide to your destination effortlessly.
               </p>
             </div>
             
-            {/* Search Console Card */}
-            <Card className="w-full max-w-4xl border-2 border-border/90 bg-card/90 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden mt-4">
+            {/* Search Console Card - Flighty Luxe Treatment */}
+            <Card className="w-full max-w-4xl card-luxe rounded-3xl overflow-hidden mt-4 border-white/10 shadow-2xl">
               <CardContent className="p-6 sm:p-8 space-y-6">
                 <form onSubmit={handleSearch} className="space-y-5">
                   <div className="grid gap-3 md:grid-cols-[1fr,auto,1fr,1fr] items-end text-left relative">
@@ -383,7 +386,7 @@ export function HomePage() {
           ].map((r, i) => (
             <Card 
               key={i} 
-              className="group border border-border/70 hover:border-primary/50 transition-all duration-200 cursor-pointer rounded-3xl overflow-hidden shadow-xs hover:shadow-xl bg-card/60 backdrop-blur-sm" 
+              className="group card-luxe card-luxe-hover cursor-pointer rounded-3xl overflow-hidden" 
               onClick={() => quickSearch(r.fromQuery, r.toQuery)}
             >
               <CardContent className="p-6 flex flex-col justify-between h-full space-y-5">

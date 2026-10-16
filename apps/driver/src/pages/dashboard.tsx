@@ -318,10 +318,10 @@ export function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
         {/* ACTIVE COCKPIT HUD (When a trip is simulated/in progress) */}
         {activeTrip && (
-          <div className={`p-6 rounded-2xl border transition-all duration-300 shadow-xl ${
+          <div className={`p-6 rounded-2xl border transition-all duration-300 hud-card ${
             isOnBreak 
               ? 'bg-amber-950/20 border-amber-500/30 ring-1 ring-amber-500/20' 
-              : 'bg-card/90 border-primary/30 ring-1 ring-primary/20'
+              : 'bg-card/95 border-primary/30 ring-1 ring-primary/20'
           }`}>
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-border/60">
               {/* Left info: Route & Status */}
@@ -337,7 +337,7 @@ export function DashboardPage() {
                       REST BREAK ACTIVE
                     </span>
                   ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 hud-phosphor-emerald border border-emerald-500/30 flex items-center gap-1">
                       <Radio className="w-3.5 h-3.5 animate-pulse" />
                       LIVE EN ROUTE
                     </span>
@@ -377,7 +377,7 @@ export function DashboardPage() {
                 <div className="flex flex-col sm:flex-row gap-2">
                   <button 
                     onClick={toggleBreak}
-                    className={`flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-bold text-sm transition-all duration-150 active:scale-95 shadow-md cursor-pointer ${
+                    className={`hud-tap-target flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-bold text-sm transition-all duration-150 shadow-md cursor-pointer ${
                       isOnBreak 
                         ? "bg-amber-500 hover:bg-amber-600 text-black font-extrabold" 
                         : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30"
@@ -400,7 +400,7 @@ export function DashboardPage() {
                         stopSimulation(activeTrip);
                       }
                     }}
-                    className="flex items-center justify-center gap-2 py-3 px-5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl font-bold text-sm transition-all duration-150 active:scale-95 shadow-md cursor-pointer"
+                    className="hud-tap-target flex items-center justify-center gap-2 py-3 px-5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl font-bold text-sm transition-all duration-150 shadow-md cursor-pointer"
                   >
                     <Square className="h-4 w-4 fill-white" /> Conclude Trip
                   </button>
