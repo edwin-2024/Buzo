@@ -47,10 +47,10 @@ export function LoginPage() {
     }
   })
 
-  const fillAdminCredentials = () => {
+  const fillAdminCredentials = async () => {
     setValue("email", "admin@buzo.com")
     setValue("password", "password123")
-    toast.info("Filled admin demo credentials!")
+    await onSubmit({ email: "admin@buzo.com", password: "password123" })
   }
 
   const onSubmit = async (data: LoginFormValues) => {

@@ -14,19 +14,11 @@ export function LoginPage() {
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
 
-  const fillCredentials = (demoEmail: string) => {
-    setEmail(demoEmail)
-    setPassword("password123")
-    setError("")
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const loginWithCreds = async (targetEmail: string, targetPass: string) => {
     setIsLoading(true)
     setError("")
-
     try {
-      const { data } = await api.post("/auth/login", { email, password })
+      const { data } = await api.post("/auth/login", { email: targetEmail, password: targetPass })
       
       if (data.user.role !== "DRIVER" && data.user.role !== "ADMIN") {
          throw new Error("Unauthorized. Driver access credentials required.");
@@ -39,6 +31,17 @@ export function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fillCredentials = (demoEmail: string) => {
+    setEmail(demoEmail)
+    setPassword("password123")
+    loginWithCreds(demoEmail, "password123")
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await loginWithCreds(email, password)
   }
 
   return (

@@ -18,14 +18,19 @@ export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuthStore()
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const loginWithCreds = async (eEmail: string, ePass: string) => {
     setLoading(true)
     try {
-      const { data } = await api.post("/auth/login", { email, password })
+      const { data } = await api.post("/auth/login", { email: eEmail, password: ePass })
       login(data.user, data.token)
       toast.success(`Welcome back, ${data.user.name}!`)
-      navigate("/")
+      if (data.user.role === "ADMIN") {
+        window.location.href = "http://localhost:5174"
+      } else if (data.user.role === "DRIVER") {
+        window.location.href = "http://localhost:5175"
+      } else {
+        navigate("/")
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to login")
     } finally {
@@ -33,18 +38,21 @@ export function LoginPage() {
     }
   }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await loginWithCreds(email, password)
+  }
+
   const fillDemo = (role: "PASSENGER" | "DRIVER" | "ADMIN") => {
     if (role === "PASSENGER") {
       setEmail("passenger@buzo.com")
       setPassword("password123")
+      loginWithCreds("passenger@buzo.com", "password123")
     } else if (role === "DRIVER") {
-      setEmail("driver@buzo.com")
-      setPassword("password123")
+      window.location.href = "http://localhost:5175/login"
     } else {
-      setEmail("admin@buzo.com")
-      setPassword("password123")
+      window.location.href = "http://localhost:5174/login"
     }
-    toast.info(`Filled ${role.toLowerCase()} demo credentials`, { duration: 1500 })
   }
 
   return (

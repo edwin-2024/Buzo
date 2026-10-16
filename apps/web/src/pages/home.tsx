@@ -74,6 +74,16 @@ export function HomePage() {
     setDate(addDays(new Date(), daysFromToday))
   }
 
+  const quickSearch = (fromName: string, toName: string) => {
+    const sId = stops?.find((s: any) => s.name.toLowerCase().includes(fromName.toLowerCase()))?.id;
+    const dId = stops?.find((s: any) => s.name.toLowerCase().includes(toName.toLowerCase()))?.id;
+    if (sId && dId) {
+      navigate(`/search?source=${sId}&destination=${dId}`);
+    } else {
+      navigate("/search");
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -340,6 +350,8 @@ export function HomePage() {
             {
               from: "Majestic Terminal",
               to: "Whitefield IT Park",
+              fromQuery: "Majestic",
+              toQuery: "Whitefield",
               frequency: "Every 20 mins",
               fare: "₹599",
               tag: "Tech Corridor Express",
@@ -347,8 +359,10 @@ export function HomePage() {
               amenities: ["WiFi", "USB Power", "Ergonomic Recline"]
             },
             {
-              from: "Electronic City Gate 1",
+              from: "Electronic City",
               to: "Majestic City Center",
+              fromQuery: "Electronic City",
+              toQuery: "Majestic",
               frequency: "Every 30 mins",
               fare: "₹649",
               tag: "Express Highway Line",
@@ -358,6 +372,8 @@ export function HomePage() {
             {
               from: "Mekhri Circle",
               to: "Kempegowda Int'l Airport",
+              fromQuery: "Mekhri",
+              toQuery: "Airport",
               frequency: "Hourly 24/7",
               fare: "₹799",
               tag: "Airport Direct Luxe",
@@ -368,7 +384,7 @@ export function HomePage() {
             <Card 
               key={i} 
               className="group border border-border/70 hover:border-primary/50 transition-all duration-200 cursor-pointer rounded-3xl overflow-hidden shadow-xs hover:shadow-xl bg-card/60 backdrop-blur-sm" 
-              onClick={() => navigate("/search")}
+              onClick={() => quickSearch(r.fromQuery, r.toQuery)}
             >
               <CardContent className="p-6 flex flex-col justify-between h-full space-y-5">
                 <div>
