@@ -323,107 +323,139 @@ export function SearchPage() {
           ) : sortedTrips.length > 0 ? (
             sortedTrips.map((trip: any) => {
               const routeStops = trip.route?.stops || trip.route?.routeStops || []
-              const availableSeats = trip.seats?.filter((s: any) => s.status === "AVAILABLE").length ?? trip.bus?.capacity ?? 40
+              const totalSeats = trip.bus?.capacity || 40
+              const availableSeats = trip.seats?.filter((s: any) => s.status === "AVAILABLE").length ?? totalSeats
               const isExpanded = expandedTripId === trip.id
+              const seatPercent = Math.round((availableSeats / totalSeats) * 100)
 
               return (
-                <Card key={trip.id} className="hover:border-primary/50 transition-all rounded-3xl overflow-hidden shadow-xs hover:shadow-md border-border/80">
+                <Card key={trip.id} className="group hover:border-primary/50 transition-all duration-200 rounded-3xl overflow-hidden shadow-xs hover:shadow-xl border-border/80 bg-card/90 backdrop-blur-sm">
                   <CardContent className="p-6">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                       {/* Bus Info & Times */}
-                      <div className="space-y-3 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="font-bold bg-primary/5 text-primary border-primary/20">
+                      <div className="space-y-4 flex-1 w-full">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <Badge variant="outline" className="font-extrabold text-xs bg-primary/10 text-primary border-primary/25 px-2.5 py-0.5">
                             {trip.bus?.number || "Coach"}
                           </Badge>
-                          <span className="text-sm font-extrabold text-foreground">
+                          <span className="text-base font-black text-foreground">
                             {trip.route?.name}
                           </span>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-[10px] font-semibold ${
-                              availableSeats > 5
-                                ? "text-emerald-600 bg-emerald-500/10 border-emerald-500/20"
-                                : availableSeats > 0
-                                ? "text-amber-600 bg-amber-500/10 border-amber-500/20"
-                                : "text-destructive bg-destructive/10 border-destructive/20"
-                            }`}
-                          >
-                            {availableSeats > 0 ? `${availableSeats} seats left` : "Sold Out"}
-                          </Badge>
-                          <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
+                          <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+                            • Volvo Multi-Axle Luxe
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[10px] font-bold px-2 py-0.5 ${
+                                availableSeats > 10
+                                  ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/25"
+                                  : availableSeats > 0
+                                  ? "text-amber-500 bg-amber-500/10 border-amber-500/25"
+                                  : "text-destructive bg-destructive/10 border-destructive/25"
+                              }`}
+                            >
+                              {availableSeats > 0 ? `${availableSeats} seats available` : "Sold Out"}
+                            </Badge>
+                            {availableSeats > 0 && (
+                              <div className="w-12 h-1.5 bg-secondary rounded-full overflow-hidden hidden sm:inline-block border border-border/60" title={`${seatPercent}% seats left`}>
+                                <div 
+                                  className={`h-full transition-all ${availableSeats > 10 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
+                                  style={{ width: `${Math.min(100, Math.max(8, seatPercent))}%` }} 
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
                             {trip.status}
                           </Badge>
                         </div>
 
                         {/* Origin to Destination line */}
                         {routeStops.length >= 2 && (
-                          <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-                            <span className="text-foreground font-semibold">{routeStops[0]?.stop?.name}</span>
-                            <span>→</span>
-                            <span className="text-foreground font-semibold">{routeStops[routeStops.length - 1]?.stop?.name}</span>
-                            <span className="text-muted-foreground">({routeStops.length} stops)</span>
+                          <div className="text-xs text-muted-foreground font-medium flex items-center gap-2">
+                            <span className="text-foreground font-bold">{routeStops[0]?.stop?.name}</span>
+                            <span className="text-primary font-bold">→</span>
+                            <span className="text-foreground font-bold">{routeStops[routeStops.length - 1]?.stop?.name}</span>
+                            <span className="text-muted-foreground font-mono">({routeStops.length} stops)</span>
                           </div>
                         )}
 
-                        <div className="grid grid-cols-3 gap-2 sm:gap-6 items-center pt-1">
+                        {/* Time Grid with Visual Timeline Connector */}
+                        <div className="grid grid-cols-3 gap-2 sm:gap-6 items-center pt-1 bg-secondary/30 p-3.5 rounded-2xl border border-border/50">
                           <div>
-                            <div className="text-xl font-extrabold text-foreground">{formatTime(trip.departureTime)}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5">{formatDateReadable(trip.departureTime)}</div>
+                            <div className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Departure</div>
+                            <div className="text-2xl font-black text-foreground mt-0.5">{formatTime(trip.departureTime)}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5 font-medium">{formatDateReadable(trip.departureTime)}</div>
                           </div>
 
                           <div className="flex flex-col items-center">
-                            <span className="text-[10px] font-semibold text-muted-foreground">
+                            <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1">
                               {getDuration(trip.departureTime, trip.arrivalTime)}
                             </span>
-                            <div className="w-full flex items-center gap-1 my-1">
-                              <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
-                              <div className="h-0.5 w-full bg-border"></div>
-                              <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+                            <div className="w-full flex items-center gap-1 my-0.5">
+                              <div className="h-2 w-2 rounded-full bg-primary ring-2 ring-primary/20 shrink-0"></div>
+                              <div className="h-0.5 w-full bg-border border-t border-dashed border-muted-foreground/40"></div>
+                              <div className="h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 shrink-0"></div>
                             </div>
-                            <span className="text-[10px] text-muted-foreground">Direct Commute</span>
+                            <span className="text-[10px] text-muted-foreground font-medium">Non-Stop Express</span>
                           </div>
 
                           <div className="text-right">
-                            <div className="text-xl font-extrabold text-foreground">{formatTime(trip.arrivalTime)}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5">{formatDateReadable(trip.arrivalTime)}</div>
+                            <div className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Arrival</div>
+                            <div className="text-2xl font-black text-foreground mt-0.5">{formatTime(trip.arrivalTime)}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5 font-medium">{formatDateReadable(trip.arrivalTime)}</div>
                           </div>
                         </div>
 
-                        {/* Intermediate Stops Toggle */}
-                        {routeStops.length > 2 && (
-                          <div className="pt-1">
+                        {/* Amenities & Seat Availability Gauge */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="px-2 py-0.5 rounded-md bg-secondary/80 text-muted-foreground text-[10px] font-semibold flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-primary" /> High-Speed WiFi
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-secondary/80 text-muted-foreground text-[10px] font-semibold flex items-center gap-1">
+                              <Armchair className="w-3 h-3 text-primary" /> Ergonomic Recline
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-secondary/80 text-muted-foreground text-[10px] font-semibold flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-emerald-500" /> GPS Radar
+                            </span>
+                          </div>
+
+                          {/* Intermediate Stops Toggle */}
+                          {routeStops.length > 2 && (
                             <button
                               type="button"
                               onClick={() => toggleTripExpand(trip.id)}
-                              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                              className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
                             >
                               {isExpanded ? (
                                 <>
-                                  <ChevronUp className="w-3.5 h-3.5" /> Hide intermediate stops
+                                  <ChevronUp className="w-3.5 h-3.5" /> Hide {routeStops.length - 2} stops
                                 </>
                               ) : (
                                 <>
-                                  <ChevronDown className="w-3.5 h-3.5" /> View {routeStops.length - 2} intermediate stop{routeStops.length - 2 > 1 ? "s" : ""}
+                                  <ChevronDown className="w-3.5 h-3.5" /> View {routeStops.length - 2} stops
                                 </>
                               )}
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
-                      {/* Price & Action */}
-                      <div className="flex sm:flex-col justify-between sm:items-end w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 gap-3">
-                        <div>
-                          <div className="text-xs text-muted-foreground sm:text-right">Fares starting at</div>
-                          <div className="text-2xl font-black text-primary">₹599</div>
+                      {/* Price & Action Box */}
+                      <div className="flex sm:flex-col justify-between sm:items-end w-full lg:w-48 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l lg:pl-6 border-border/60 gap-4 shrink-0">
+                        <div className="lg:text-right">
+                          <div className="text-[11px] font-semibold text-muted-foreground">Standard Fare</div>
+                          <div className="text-3xl font-black text-primary leading-tight">₹599</div>
+                          <div className="text-[10px] text-muted-foreground">Taxes & fees included</div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-row lg:flex-col gap-2 w-full sm:w-auto">
                           <Button 
                             variant="outline" 
                             size="sm" 
                             onClick={() => navigate(`/track?tripId=${trip.id}`)}
-                            className="rounded-xl text-xs font-semibold shadow-2xs"
+                            className="rounded-xl text-xs font-bold h-10 w-full"
                           >
                             Live Radar
                           </Button>
@@ -431,7 +463,7 @@ export function SearchPage() {
                             size="sm" 
                             onClick={() => navigate(`/booking/${trip.id}`)}
                             disabled={availableSeats === 0}
-                            className="rounded-xl font-bold text-xs gap-1.5 shadow-sm"
+                            className="rounded-xl font-bold text-xs gap-1.5 h-10 w-full shadow-md shadow-primary/20"
                           >
                             <Armchair className="w-3.5 h-3.5" /> Select Seat
                           </Button>

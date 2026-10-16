@@ -1,7 +1,25 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { LogOut, Navigation, MapPin, Play, Square, Loader2, Coffee, AlertTriangle, Clock, CheckCircle2, Gauge } from "lucide-react"
+import { 
+  LogOut, 
+  Navigation, 
+  MapPin, 
+  Play, 
+  Square, 
+  Loader2, 
+  Coffee, 
+  AlertTriangle, 
+  Clock, 
+  CheckCircle2, 
+  Gauge,
+  Radio,
+  ExternalLink,
+  ShieldCheck,
+  Sparkles,
+  Bus,
+  ChevronRight
+} from "lucide-react"
 import { io, Socket } from "socket.io-client"
 
 import { useAuthStore } from "../stores/auth.store"
@@ -127,11 +145,10 @@ export function DashboardPage() {
       return R * c; // Distance in km
     };
     
-    // We will calculate total steps for the current segment dynamically
+    // Calculate total steps for current segment
     let currentSegmentSteps = 0;
     
     simulationRef.current = setInterval(() => {
-      // Pause advancing steps and skip location update API calls if driver is on break
       if (isOnBreakRef.current) {
         return;
       }
@@ -159,10 +176,7 @@ export function DashboardPage() {
       const lng2 = parseFloat(nextStop.longitude);
       
       if (step === 0) {
-        // Calculate steps needed for this segment on the first tick of the segment
         const distKm = getDistance(lat1, lng1, lat2, lng2);
-        // Interval is 1s, so we travel SPEED_KMS km per tick
-        // Minimum 1 step to avoid division by zero
         currentSegmentSteps = Math.max(1, Math.ceil(distKm / SPEED_KMS));
       }
 
@@ -189,7 +203,6 @@ export function DashboardPage() {
          step = 0;
          stopIndex++;
          
-         // Update UI to reflect the actual index in the original stops array
          const originalIndex = trip.route.stops.findIndex((s: any) => s.stopId === validStops[stopIndex]?.stopId);
          if (originalIndex !== -1) {
             setCurrentStopIndex(originalIndex);
@@ -227,22 +240,74 @@ export function DashboardPage() {
     api.patch(`/trips/${trip.id}`, { status: "COMPLETED" }).catch(console.error);
   }
 
+  const nextStop = activeTrip?.route?.stops?.[currentStopIndex + 1]?.stop;
+  const currentStop = activeTrip?.route?.stops?.[currentStopIndex]?.stop;
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card shadow-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Top Cockpit Header */}
+      <header className="border-b border-border/60 bg-card/90 backdrop-blur-xl sticky top-0 z-20 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary p-1.5 rounded-md">
-              <Navigation className="h-5 w-5 text-primary-foreground" />
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary via-blue-600 to-indigo-700 flex items-center justify-center shadow-md shadow-primary/20">
+              <Navigation className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">Buzo Driver</h1>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-black text-lg tracking-tight">BUZO</span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                  COCKPIT
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-medium">In-Cab Transit Navigation</p>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-muted-foreground hidden sm:inline">Hello, <span className="text-foreground">{user?.name}</span></span>
+
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Live Telemetry Ping */}
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-semibold">
+              <Radio className="w-3 h-3 animate-pulse" />
+              <span>Telemetry Connected</span>
+            </div>
+
+            {/* Portal Jumps */}
+            <div className="hidden lg:flex items-center gap-2 border-l border-border/60 pl-3">
+              <a 
+                href="http://localhost:5173" 
+                target="_blank" 
+                rel="noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground font-medium flex items-center gap-1 px-2.5 py-1 rounded-md hover:bg-secondary/60 transition-colors"
+              >
+                Passenger App <ExternalLink className="w-3 h-3 opacity-70" />
+              </a>
+              <a 
+                href="http://localhost:5174" 
+                target="_blank" 
+                rel="noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground font-medium flex items-center gap-1 px-2.5 py-1 rounded-md hover:bg-secondary/60 transition-colors"
+              >
+                Admin Portal <ExternalLink className="w-3 h-3 opacity-70" />
+              </a>
+            </div>
+
+            {/* Driver Profile */}
+            <div className="flex items-center gap-2 pl-2">
+              <div className="h-8 w-8 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
+                {user?.name?.[0] || "D"}
+              </div>
+              <div className="hidden sm:block text-left">
+                <div className="text-xs font-bold text-foreground leading-tight flex items-center gap-1">
+                  {user?.name || "Driver"}
+                  <ShieldCheck className="w-3 h-3 text-primary" />
+                </div>
+                <div className="text-[10px] text-muted-foreground font-mono leading-tight">In-Cab Duty: Active</div>
+              </div>
+            </div>
+
             <button 
               onClick={handleLogout}
-              className="p-2 text-muted-foreground hover:bg-secondary hover:text-foreground rounded-md transition-colors"
-              title="Logout"
+              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+              title="Sign out of Cockpit"
             >
               <LogOut className="h-4 w-4" />
             </button>
@@ -250,211 +315,355 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Your Assigned Trips</h2>
-          <p className="text-muted-foreground mt-1">Manage your schedules and broadcast live location to passengers.</p>
-        </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+        {/* ACTIVE COCKPIT HUD (When a trip is simulated/in progress) */}
+        {activeTrip && (
+          <div className={`p-6 rounded-2xl border transition-all duration-300 shadow-xl ${
+            isOnBreak 
+              ? 'bg-amber-950/20 border-amber-500/30 ring-1 ring-amber-500/20' 
+              : 'bg-card/90 border-primary/30 ring-1 ring-primary/20'
+          }`}>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-border/60">
+              {/* Left info: Route & Status */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/20 text-primary border border-primary/30 flex items-center gap-1">
+                    <Bus className="w-3.5 h-3.5" />
+                    Coach {activeTrip.bus?.number || activeTrip.busId}
+                  </span>
+                  {isOnBreak ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                      <Coffee className="w-3.5 h-3.5" />
+                      REST BREAK ACTIVE
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                      <Radio className="w-3.5 h-3.5 animate-pulse" />
+                      LIVE EN ROUTE
+                    </span>
+                  )}
+                  {activeDelay && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      +{activeDelay.minutes}m DELAY BROADCAST
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+                  {activeTrip.route.name}
+                </h2>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Current: <strong className="text-foreground">{currentStop?.name || "Depot"}</strong></span>
+                  <ChevronRight className="w-3.5 h-3.5 text-primary" />
+                  <span>Next Target: <strong className="text-primary font-bold">{nextStop?.name || "Terminal Station"}</strong></span>
+                </div>
+              </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : trips?.length === 0 ? (
-          <div className="bg-card border border-border/50 rounded-xl shadow-sm p-12 text-center">
-            <div className="mx-auto w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
-              <MapPin className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground">No Trips Assigned</h3>
-            <p className="mt-1 text-muted-foreground">You don't have any upcoming trips scheduled at the moment.</p>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {trips?.map((trip: any) => {
-               const isActive = activeTrip?.id === trip.id;
-               
-               return (
-                <div key={trip.id} className={`bg-card rounded-xl shadow-sm overflow-hidden transition-all duration-200 border ${isActive ? 'border-primary ring-1 ring-primary' : 'border-border/50 hover:border-primary/50'}`}>
-                  <div className={`px-5 py-4 border-b flex justify-between items-center ${isActive ? 'bg-primary/5' : 'bg-card'}`}>
-                    <span className="font-semibold text-foreground">{trip.route.name}</span>
-                    <div className="flex items-center gap-2">
-                      {isActive && isOnBreak && (
-                        <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 flex items-center gap-1">
-                          <Coffee className="h-3 w-3" /> On Break
-                        </span>
-                      )}
-                      <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border ${trip.status === 'IN_PROGRESS' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'}`}>
-                        {trip.status}
-                      </span>
-                    </div>
+              {/* Digital Speedometer Gauge HUD */}
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 p-4 rounded-2xl bg-secondary/70 border border-border/80">
+                  <div className={`p-3 rounded-xl ${isOnBreak ? 'bg-amber-500/20 text-amber-400' : 'bg-primary/20 text-primary'}`}>
+                    <Gauge className="w-8 h-8" />
                   </div>
-                  <div className="p-5 space-y-5">
-                    <div className="flex justify-between text-sm">
-                      <div>
-                        <p className="text-muted-foreground font-medium mb-0.5">Departure</p>
-                        <p className="font-semibold text-foreground">{new Date(trip.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-muted-foreground font-medium mb-0.5">Bus</p>
-                        <p className="font-semibold text-foreground">{trip.bus?.number || trip.busId}</p>
-                      </div>
-                    </div>
-
-                    {isActive && (
-                      <div className="p-3 bg-secondary/60 rounded-lg border border-border/50 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <Gauge className="h-4 w-4 text-primary" />
-                          <div>
-                            <span className="text-muted-foreground">Speed: </span>
-                            <span className="font-bold text-foreground">{isOnBreak ? "0 km/h (Paused)" : "60 km/h"}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 font-medium">
-                          <span className="text-muted-foreground">Next:</span>
-                          <span className="font-semibold text-foreground truncate max-w-[120px]">
-                            {trip.route.stops[currentStopIndex + 1]?.stop?.name || "Terminal"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {isActive && isOnBreak && (
-                      <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center gap-2">
-                        <Coffee className="h-4 w-4 shrink-0 text-amber-600" />
-                        <span>Driver rest break active. GPS updates paused.</span>
-                      </div>
-                    )}
-
-                    {isActive && (
-                      <div className="space-y-2 pt-1 border-t border-border/50">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> Broadcast Delay
-                          </p>
-                          {activeDelay ? (
-                            <button
-                              onClick={() => handleReportDelay(0, "On time")}
-                              className="text-[11px] font-bold text-green-600 hover:text-green-700 flex items-center gap-1"
-                            >
-                              <CheckCircle2 className="h-3 w-3" /> Mark On-Time
-                            </button>
-                          ) : (
-                            <span className="text-[10px] text-green-600 font-medium">Schedule On-Time</span>
-                          )}
-                        </div>
-
-                        {activeDelay && (
-                          <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 truncate">
-                              <AlertTriangle className="h-4 w-4 shrink-0" />
-                              <span>Live: <strong>+{activeDelay.minutes}m</strong> ({activeDelay.reason})</span>
-                            </div>
-                            <button
-                              onClick={() => handleReportDelay(0, "On time")}
-                              className="px-2 py-0.5 rounded bg-background border text-[10px] font-bold shadow-xs hover:bg-secondary cursor-pointer"
-                            >
-                              Clear
-                            </button>
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-4 gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleReportDelay(5, "Heavy Traffic")}
-                            className="px-1.5 py-1.5 rounded-md text-[11px] font-semibold bg-secondary/80 hover:bg-primary hover:text-primary-foreground border border-border/50 transition-colors cursor-pointer"
-                          >
-                            +5m Traffic
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleReportDelay(10, "Signal Delays")}
-                            className="px-1.5 py-1.5 rounded-md text-[11px] font-semibold bg-secondary/80 hover:bg-primary hover:text-primary-foreground border border-border/50 transition-colors cursor-pointer"
-                          >
-                            +10m Signal
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleReportDelay(15, "Road Work")}
-                            className="px-1.5 py-1.5 rounded-md text-[11px] font-semibold bg-secondary/80 hover:bg-primary hover:text-primary-foreground border border-border/50 transition-colors cursor-pointer"
-                          >
-                            +15m Road
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleReportDelay(30, "Detour / Weather")}
-                            className="px-1.5 py-1.5 rounded-md text-[11px] font-semibold bg-secondary/80 hover:bg-primary hover:text-primary-foreground border border-border/50 transition-colors cursor-pointer"
-                          >
-                            +30m Detour
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Route Stops</p>
-                      <div className="h-40 overflow-y-auto bg-secondary/50 rounded-lg p-3 border border-border/50 space-y-1.5 scrollbar-thin">
-                        {trip.route.stops.map((rs: any, idx: number) => (
-                           <div key={rs.stopId} className={`flex items-center gap-3 text-sm p-1.5 rounded-md transition-colors ${isActive && idx === currentStopIndex ? 'bg-background shadow-sm border border-border/50 text-foreground font-medium' : 'text-muted-foreground'}`}>
-                             <div className="relative flex items-center justify-center">
-                               <div className={`w-2.5 h-2.5 rounded-full ${isActive && idx === currentStopIndex ? 'bg-primary' : 'bg-muted-foreground/30'}`}></div>
-                               {isActive && idx === currentStopIndex && (
-                                 <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-75"></div>
-                               )}
-                             </div>
-                             {rs.stop.name}
-                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      {!isActive && !isSimulating ? (
-                        <button 
-                          onClick={() => startSimulation(trip)}
-                          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md font-medium transition-colors shadow-sm"
-                        >
-                          <Play className="h-4 w-4" /> Start Simulation
-                        </button>
-                      ) : isActive ? (
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={toggleBreak}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md font-medium transition-colors shadow-sm text-sm ${
-                              isOnBreak 
-                                ? "bg-amber-600 hover:bg-amber-700 text-white" 
-                                : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/30"
-                            }`}
-                          >
-                            {isOnBreak ? (
-                              <>
-                                <Play className="h-4 w-4" /> Resume Driving
-                              </>
-                            ) : (
-                              <>
-                                <Coffee className="h-4 w-4" /> Take Break
-                              </>
-                            )}
-                          </button>
-                          <button 
-                            onClick={() => stopSimulation(trip)}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-md font-medium transition-colors shadow-sm text-sm"
-                          >
-                            <Square className="h-4 w-4" /> End Trip
-                          </button>
-                        </div>
-                      ) : (
-                        <button disabled className="w-full py-2.5 px-4 bg-secondary text-muted-foreground rounded-md font-medium cursor-not-allowed">
-                          Another trip active
-                        </button>
-                      )}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cockpit Telemetry</p>
+                    <div className="text-3xl font-black font-mono text-foreground tracking-tight">
+                      {isOnBreak ? "0" : "60"} <span className="text-sm font-semibold text-muted-foreground font-sans">km/h</span>
                     </div>
                   </div>
                 </div>
-               )
-            })}
+
+                {/* Main Action Buttons: Take Break & End Trip */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button 
+                    onClick={toggleBreak}
+                    className={`flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-bold text-sm transition-all duration-150 active:scale-95 shadow-md cursor-pointer ${
+                      isOnBreak 
+                        ? "bg-amber-500 hover:bg-amber-600 text-black font-extrabold" 
+                        : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30"
+                    }`}
+                  >
+                    {isOnBreak ? (
+                      <>
+                        <Play className="h-4 w-4 fill-black" /> Resume Driving
+                      </>
+                    ) : (
+                      <>
+                        <Coffee className="h-4 w-4" /> Driver Rest Break
+                      </>
+                    )}
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      if (confirm("Conclude this trip and release coach?")) {
+                        stopSimulation(activeTrip);
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 py-3 px-5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl font-bold text-sm transition-all duration-150 active:scale-95 shadow-md cursor-pointer"
+                  >
+                    <Square className="h-4 w-4 fill-white" /> Conclude Trip
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Delay Reporting Controls */}
+            <div className="pt-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Broadcast Delay to Fleet Radar & Passengers
+                  </span>
+                </div>
+                {activeDelay ? (
+                  <button
+                    onClick={() => handleReportDelay(0, "On time")}
+                    className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Clear & Mark On-Time
+                  </button>
+                ) : (
+                  <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Scheduled On-Time
+                  </span>
+                )}
+              </div>
+
+              {activeDelay && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-xs font-medium flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-red-400" />
+                    <span>Transmitting Live: <strong>+{activeDelay.minutes} min delay</strong> ({activeDelay.reason}) to all passenger tracking maps.</span>
+                  </div>
+                  <button
+                    onClick={() => handleReportDelay(0, "On time")}
+                    className="px-2.5 py-1 rounded-lg bg-background text-foreground border border-border/80 text-xs font-bold shadow-xs hover:bg-secondary cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { min: 5, label: "+5m Traffic", reason: "Heavy Traffic Congestion" },
+                  { min: 10, label: "+10m Signal", reason: "Traffic Signal Delays" },
+                  { min: 15, label: "+15m Road Work", reason: "Road Works & Construction" },
+                  { min: 30, label: "+30m Detour", reason: "Detour / Adverse Weather" },
+                ].map((item) => {
+                  const isCurrent = activeDelay?.minutes === item.min;
+                  return (
+                    <button
+                      key={item.min}
+                      type="button"
+                      onClick={() => handleReportDelay(item.min, item.reason)}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all duration-150 active:scale-95 cursor-pointer ${
+                        isCurrent
+                          ? "bg-red-500 text-white border-red-400 shadow-md shadow-red-500/20"
+                          : "bg-secondary/70 hover:bg-primary hover:text-primary-foreground border-border/60 hover:border-primary"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Waypoint Track / Route Stops Progress */}
+            <div className="pt-6 border-t border-border/60 mt-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Route Waypoint Sequence ({activeTrip.route.stops.length} stations)
+                </p>
+                <span className="text-xs text-muted-foreground font-mono">
+                  Waypoint {currentStopIndex + 1} of {activeTrip.route.stops.length}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {activeTrip.route.stops.map((rs: any, idx: number) => {
+                  const isPassed = idx < currentStopIndex;
+                  const isCurrent = idx === currentStopIndex;
+
+                  return (
+                    <div 
+                      key={rs.stopId}
+                      className={`p-3 rounded-xl border text-xs flex items-center gap-2.5 transition-all ${
+                        isCurrent 
+                          ? 'bg-primary/10 border-primary text-foreground font-bold shadow-xs' 
+                          : isPassed 
+                            ? 'bg-secondary/40 border-border/40 text-muted-foreground' 
+                            : 'bg-card border-border/60 text-foreground'
+                      }`}
+                    >
+                      <div className="relative flex items-center justify-center shrink-0">
+                        {isPassed ? (
+                          <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </div>
+                        ) : isCurrent ? (
+                          <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-[10px]">
+                            {idx + 1}
+                            <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-75" />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-secondary text-muted-foreground flex items-center justify-center text-[10px] font-mono border">
+                            {idx + 1}
+                          </div>
+                        )}
+                      </div>
+                      <div className="truncate">
+                        <div className="truncate font-semibold">{rs.stop?.name || "Station"}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {isCurrent ? "Approaching / At Station" : isPassed ? "Departed" : "Upcoming"}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         )}
+
+        {/* Assigned Trips Roster */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-bold tracking-tight text-foreground">Assigned Transit Schedules</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Select an assigned trip to initiate live satellite positioning simulation.
+              </p>
+            </div>
+            {trips && trips.length > 0 && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary border border-border/60 text-muted-foreground">
+                {trips.length} Trips Assigned
+              </span>
+            )}
+          </div>
+
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-xs text-muted-foreground">Retrieving duty schedules...</p>
+            </div>
+          ) : trips?.length === 0 ? (
+            <div className="bg-card border border-border/60 rounded-2xl p-12 text-center shadow-xs space-y-4">
+              <div className="mx-auto w-16 h-16 bg-secondary/80 rounded-2xl flex items-center justify-center border border-border/60">
+                <MapPin className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div className="max-w-md mx-auto space-y-1">
+                <h4 className="text-lg font-bold text-foreground">No Trips Assigned to Your Cockpit</h4>
+                <p className="text-xs text-muted-foreground">
+                  You currently have no scheduled trips. An administrator can assign upcoming trips to your coach from the Buzo Admin Command Center.
+                </p>
+              </div>
+              <div>
+                <a 
+                  href="http://localhost:5174/trips"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Open Admin Trip Scheduler <ExternalLink className="w-3 h-3 ml-0.5" />
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {trips?.map((trip: any) => {
+                const isActive = activeTrip?.id === trip.id;
+                
+                return (
+                  <div 
+                    key={trip.id} 
+                    className={`bg-card rounded-2xl shadow-xs overflow-hidden transition-all duration-200 border ${
+                      isActive 
+                        ? 'border-primary ring-1 ring-primary shadow-lg shadow-primary/5' 
+                        : 'border-border/60 hover:border-primary/50'
+                    }`}
+                  >
+                    <div className={`px-5 py-4 border-b border-border/40 flex justify-between items-center ${
+                      isActive ? 'bg-primary/10' : 'bg-secondary/20'
+                    }`}>
+                      <span className="font-bold text-foreground text-sm flex items-center gap-1.5">
+                        <Bus className="w-4 h-4 text-primary" />
+                        {trip.route.name}
+                      </span>
+                      <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${
+                        trip.status === 'IN_PROGRESS' 
+                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                          : trip.status === 'COMPLETED'
+                            ? 'bg-muted text-muted-foreground border-border'
+                            : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                      }`}>
+                        {trip.status}
+                      </span>
+                    </div>
+
+                    <div className="p-5 space-y-4">
+                      <div className="grid grid-cols-2 gap-3 text-xs bg-secondary/30 p-3 rounded-xl border border-border/40">
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-muted-foreground">Scheduled Dep</p>
+                          <p className="font-bold text-foreground mt-0.5">
+                            {new Date(trip.departureTime).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-muted-foreground">Assigned Coach</p>
+                          <p className="font-mono font-bold text-foreground mt-0.5">
+                            {trip.bus?.number || trip.busId}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Stops list summary */}
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Route Stations ({trip.route.stops?.length || 0})
+                        </p>
+                        <div className="h-28 overflow-y-auto bg-secondary/30 rounded-xl p-2.5 border border-border/40 space-y-1 scrollbar-thin text-xs">
+                          {trip.route.stops.map((rs: any, idx: number) => (
+                            <div 
+                              key={rs.stopId} 
+                              className="flex items-center gap-2 py-0.5 text-muted-foreground"
+                            >
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary/70 shrink-0" />
+                              <span className="truncate">{rs.stop?.name || `Stop ${idx + 1}`}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Simulation Trigger */}
+                      <div className="pt-2">
+                        {!isActive && !isSimulating ? (
+                          <button 
+                            onClick={() => startSimulation(trip)}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold text-xs transition-all duration-150 active:scale-[0.98] shadow-sm cursor-pointer"
+                          >
+                            <Play className="h-3.5 w-3.5 fill-primary-foreground" /> Start Cockpit Simulation
+                          </button>
+                        ) : isActive ? (
+                          <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-center text-xs font-bold text-primary">
+                            Active in Main Cockpit HUD Above ↑
+                          </div>
+                        ) : (
+                          <button disabled className="w-full py-2.5 px-4 bg-secondary text-muted-foreground rounded-xl font-medium text-xs cursor-not-allowed">
+                            Another trip active
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   )

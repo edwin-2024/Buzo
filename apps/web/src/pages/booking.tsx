@@ -134,14 +134,14 @@ export function BookingPage() {
           )
         }}
         className={`
-          relative w-11 h-13 rounded-t-xl rounded-b-md border-2 font-bold text-xs transition-all duration-150 flex flex-col items-center justify-center
+          relative w-11 h-13 rounded-t-xl rounded-b-md border-2 font-bold text-xs transition-all duration-150 flex flex-col items-center justify-center select-none
           ${isBooked
-            ? "bg-muted/70 text-muted-foreground/40 border-muted cursor-not-allowed"
+            ? "bg-muted/60 text-muted-foreground/30 border-muted/50 cursor-not-allowed"
             : isSelected
-              ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 ring-2 ring-primary/30"
+              ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 scale-105 ring-2 ring-primary/40 cursor-pointer active:scale-95"
               : isFrontRow
-                ? "border-amber-400/80 bg-amber-500/5 hover:border-amber-500 text-foreground hover:scale-102 shadow-xs"
-                : "bg-background hover:border-primary/60 hover:bg-primary/5 border-input text-foreground hover:scale-102"}
+                ? "border-amber-400/80 bg-amber-500/10 hover:border-amber-400 text-foreground hover:scale-105 shadow-xs cursor-pointer active:scale-95"
+                : "bg-background/90 hover:border-primary/70 hover:bg-primary/10 border-input text-foreground hover:scale-105 cursor-pointer active:scale-95 shadow-2xs"}
         `}
       >
         {/* Front row premium gold sparkle indicator */}

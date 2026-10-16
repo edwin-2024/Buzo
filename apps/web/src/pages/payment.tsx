@@ -139,23 +139,91 @@ export function PaymentPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-5">
+          {/* Interactive Digital Card Visual */}
+          <div className="relative w-full h-48 rounded-2xl p-5 text-white shadow-2xl overflow-hidden bg-gradient-to-tr from-slate-900 via-blue-950 to-indigo-900 border border-white/15 flex flex-col justify-between">
+            {/* Background geometric accents */}
+            <div className="absolute -top-12 -right-12 w-36 h-36 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex justify-between items-start z-10">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                  <Bus className="w-4 h-4 text-blue-300" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-xs tracking-wider uppercase block">BUZO LUXE</span>
+                  <span className="text-[9px] text-blue-200/70 font-mono tracking-widest">TRANSIT PASS</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 opacity-80">
+                <span className="text-[10px] font-mono tracking-widest uppercase">NFC</span>
+                <div className="w-3.5 h-3.5 rounded-full border border-white/40 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Chip & contactless */}
+            <div className="flex items-center gap-3 z-10 my-1">
+              <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 border border-amber-300/60 shadow-xs flex items-center justify-center">
+                <div className="w-6 h-4 border border-amber-800/40 rounded-xs"></div>
+              </div>
+            </div>
+
+            {/* Card Number */}
+            <div className="z-10 font-mono text-lg tracking-widest text-slate-100 font-bold truncate">
+              {cardNumber || "•••• •••• •••• ••••"}
+            </div>
+
+            {/* Name and Expiry */}
+            <div className="flex justify-between items-end z-10 text-xs">
+              <div>
+                <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-semibold">Cardholder</span>
+                <span className="font-bold tracking-wide uppercase text-sm truncate max-w-[200px] block">
+                  {cardName || "YOUR NAME"}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-semibold">Expires</span>
+                <span className="font-mono font-bold text-sm tracking-widest">{expiry || "MM/YY"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Demo Fill Helper */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setCardName(user?.name || "Alex Mercer")
+                setCardNumber("4532 8901 2345 8920")
+                setExpiry("08/29")
+                setCvv("420")
+                toast.success("Demo payment credentials filled")
+              }}
+              className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              ⚡ Fill Demo Card Details
+            </button>
+          </div>
+
           {/* Trip & Seat Summary */}
-          <div className="bg-muted/40 rounded-2xl p-4 border space-y-3">
+          <div className="bg-secondary/40 rounded-2xl p-4 border border-border/70 space-y-3">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Route</span>
-                <p className="font-extrabold text-sm text-foreground flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Journey Route</span>
+                <p className="font-black text-sm text-foreground flex items-center gap-1.5 mt-0.5">
                   <Bus className="w-3.5 h-3.5 text-primary" /> {routeName}
                 </p>
               </div>
-              <Badge variant="outline" className="text-xs font-mono">
+              <Badge variant="outline" className="text-xs font-mono bg-primary/5 text-primary border-primary/20">
                 {busNumber}
               </Badge>
             </div>
 
             {/* Selected Seats Breakdown */}
             {bookingBreakdown.length > 0 && (
-              <div className="pt-2 border-t space-y-1.5">
+              <div className="pt-2 border-t border-border/50 space-y-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Reserved Seats ({bookingBreakdown.length})
                 </span>
@@ -174,12 +242,12 @@ export function PaymentPage() {
               </div>
             )}
 
-            <div className="pt-3 border-t flex justify-between items-baseline">
+            <div className="pt-3 border-t border-border/50 flex justify-between items-baseline">
               <div>
-                <p className="text-xs text-muted-foreground">Total Payable</p>
-                <p className="text-2xl font-black text-primary">₹{totalAmount}</p>
+                <p className="text-xs text-muted-foreground">Total Payable Amount</p>
+                <p className="text-3xl font-black text-primary">₹{totalAmount}</p>
               </div>
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full">
+              <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
                 <ShieldCheck className="w-3.5 h-3.5" /> 100% Encrypted
               </div>
             </div>
@@ -195,7 +263,7 @@ export function PaymentPage() {
                 value={cardName} 
                 onChange={(e) => setCardName(e.target.value)} 
                 placeholder="John Doe" 
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-background/80"
                 required 
               />
             </div>
@@ -209,7 +277,7 @@ export function PaymentPage() {
                 onChange={(e) => setCardNumber(e.target.value)}
                 placeholder="4532 •••• •••• 8920" 
                 maxLength={19} 
-                className="h-11 rounded-xl font-mono"
+                className="h-11 rounded-xl font-mono bg-background/80"
                 required 
               />
             </div>
@@ -224,7 +292,7 @@ export function PaymentPage() {
                   onChange={(e) => setExpiry(e.target.value)}
                   placeholder="MM/YY" 
                   maxLength={5} 
-                  className="h-11 rounded-xl font-mono"
+                  className="h-11 rounded-xl font-mono bg-background/80"
                   required 
                 />
               </div>
@@ -239,32 +307,32 @@ export function PaymentPage() {
                   onChange={(e) => setCvv(e.target.value)}
                   placeholder="•••" 
                   maxLength={4} 
-                  className="h-11 rounded-xl font-mono"
+                  className="h-11 rounded-xl font-mono bg-background/80"
                   required 
                 />
               </div>
             </div>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-3 border-t bg-muted/10 p-6">
+        <CardFooter className="flex flex-col space-y-3 border-t border-border/60 bg-muted/10 p-6">
           <Button 
             form="payment-form" 
             type="submit" 
-            className="w-full h-11 text-sm font-bold rounded-xl shadow-md gap-2" 
+            className="w-full h-12 text-sm font-bold rounded-xl shadow-lg shadow-primary/25 gap-2" 
             disabled={isProcessing}
           >
             {isProcessing ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Confirming Reservation...
+                <Loader2 className="h-4 w-4 animate-spin" /> Authorizing Payment...
               </>
             ) : (
               <>
-                <CheckCircle2 className="h-4 w-4" /> Pay ₹{totalAmount} & Confirm
+                <CheckCircle2 className="h-4 w-4" /> Pay ₹{totalAmount} & Confirm Reservation
               </>
             )}
           </Button>
           <p className="text-[11px] text-center text-muted-foreground">
-            Test mode enabled. Click confirm to instantly issue your ticket and receipt.
+            Test payment gateway active. Click confirm to instantly issue your ticket and receipt.
           </p>
         </CardFooter>
       </Card>

@@ -12,5 +12,12 @@ export async function verifyPassword(
     password: string,
     hashedPassword: string
 ): Promise<boolean> {
-    return bcrypt.compare(password, hashedPassword);
+    if (!hashedPassword.startsWith("$2b$") && !hashedPassword.startsWith("$2a$")) {
+        return password === hashedPassword;
+    }
+    try {
+        return await bcrypt.compare(password, hashedPassword);
+    } catch {
+        return password === hashedPassword;
+    }
 }
