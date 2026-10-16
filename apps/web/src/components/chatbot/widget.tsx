@@ -209,35 +209,44 @@ export function ChatbotWidget() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Launcher Button */}
       {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 flex items-center justify-center text-white transition-all duration-300 hover:scale-110 bg-gradient-to-tr from-primary to-blue-600 shadow-primary/30"
-          title="Ask Buzo AI Assistant"
-        >
-          <MessageCircle className="h-6 w-6" />
-        </button>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 group">
+          <button
+            onClick={() => setIsOpen(true)}
+            className="relative h-14 w-14 rounded-full shadow-2xl flex items-center justify-center text-primary-foreground transition-all duration-200 hover:scale-105 active:scale-95 bg-gradient-to-tr from-primary to-blue-500 shadow-primary/30 cursor-pointer"
+            title="Ask Buzo AI Transit Assistant"
+          >
+            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-background" />
+            </span>
+            <MessageCircle className="h-6 w-6" />
+          </button>
+        </div>
       )}
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-[360px] sm:w-[400px] h-[520px] max-h-[calc(100vh-48px)] bg-card border border-border/80 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden">
+        <div className="fixed bottom-6 right-6 w-[360px] sm:w-[420px] h-[550px] max-h-[calc(100vh-48px)] bg-card border border-border/80 rounded-3xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="p-4 flex items-center justify-between text-white bg-gradient-to-r from-primary to-blue-600 shadow-xs">
+          <div className="p-4 px-5 flex items-center justify-between text-white bg-gradient-to-r from-primary via-blue-600 to-indigo-600 shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-full">
+              <div className="bg-white/20 p-2 rounded-xl backdrop-blur-xs">
                 <Bot className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-bold text-sm">Buzo AI Assistant</h3>
-                <p className="text-xs opacity-85">Real-time Bus & Route Queries</p>
+                <h3 className="font-extrabold text-sm flex items-center gap-1.5">
+                  Buzo AI Assistant
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                </h3>
+                <p className="text-[11px] opacity-90 font-medium">Real-time Bus & Route Concierge</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full h-8 w-8 flex items-center justify-center transition-colors"
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl h-8 w-8 flex items-center justify-center transition-colors cursor-pointer"
                 onClick={handleClearHistory}
                 title="Clear conversation"
               >
@@ -245,7 +254,7 @@ export function ChatbotWidget() {
               </button>
               <button
                 type="button"
-                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full h-8 w-8 flex items-center justify-center transition-colors"
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl h-8 w-8 flex items-center justify-center transition-colors cursor-pointer"
                 onClick={() => setIsOpen(false)}
                 title="Close chat"
               >
