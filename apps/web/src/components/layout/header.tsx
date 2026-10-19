@@ -4,6 +4,7 @@ import { Bus, LogOut, Menu, X, Shield, Truck, Ticket, Radio } from "lucide-react
 
 import { useAuthStore } from "@/stores/auth.store"
 import { Button } from "@/components/ui/button"
+import { ModeToggle } from "@/components/layout/mode-toggle"
 
 export function Header() {
   const { user, logout } = useAuthStore()
@@ -97,6 +98,8 @@ export function Header() {
               <Truck className="w-3.5 h-3.5" /> Driver App ↗
             </a>
           )}
+
+          <ModeToggle />
 
           {user ? (
             <div className="relative" ref={profileRef}>

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -35,27 +37,27 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
-    /* Premium Obsidian & Electric Azure */
-    --background: 224 71% 4%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 8.5%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 10%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 14%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 13%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 16%;
-    --accent-foreground: 210 40% 98%;
+    color-scheme: light;
+    /* Warm Alabaster Quiet Luxury */
+    --background: 40 18% 97%;
+    --foreground: 220 15% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 10%;
+    --primary: 220 18% 18%;
+    --primary-foreground: 40 20% 98%;
+    --secondary: 40 12% 93%;
+    --secondary-foreground: 220 15% 15%;
+    --muted: 40 12% 93%;
+    --muted-foreground: 220 10% 46%;
+    --accent: 40 14% 91%;
+    --accent-foreground: 220 15% 10%;
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 30% 16%;
-    --input: 217.2 30% 16%;
-    --ring: 217.2 91.2% 59.8%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 220 18% 30%;
     --radius: 0.75rem;
 
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -63,25 +65,27 @@
   }
 
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 8.5%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 10%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 14%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 13%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 16%;
-    --accent-foreground: 210 40% 98%;
+    color-scheme: dark;
+    /* Matte Slate Quiet Luxury */
+    --background: 224 25% 6%;
+    --foreground: 210 20% 98%;
+    --card: 224 20% 9%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 20% 10%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 210 20% 98%;
+    --primary-foreground: 224 25% 8%;
+    --secondary: 224 18% 14%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 224 18% 13%;
+    --muted-foreground: 220 15% 65%;
+    --accent: 224 18% 16%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 30% 16%;
-    --input: 217.2 30% 16%;
-    --ring: 217.2 91.2% 59.8%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 224 15% 16%;
+    --input: 224 15% 16%;
+    --ring: 210 20% 80%;
   }
 }
 
@@ -114,8 +118,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* Avionics Cockpit HUD Utilities */
 .hud-card {
-  background: rgba(8, 12, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+}
+.dark .hud-card {
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
 }
 

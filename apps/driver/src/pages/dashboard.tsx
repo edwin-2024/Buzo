@@ -24,6 +24,7 @@ import { io, Socket } from "socket.io-client"
 
 import { useAuthStore } from "../stores/auth.store"
 import { api } from "../lib/axios"
+import { ModeToggle } from "../components/mode-toggle"
 
 export function DashboardPage() {
   const { user, logout, token } = useAuthStore()
@@ -249,23 +250,23 @@ export function DashboardPage() {
       <header className="border-b border-border/60 bg-card/90 backdrop-blur-xl sticky top-0 z-20 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary via-blue-600 to-indigo-700 flex items-center justify-center shadow-md shadow-primary/20">
-              <Navigation className="h-5 w-5 text-white" />
+            <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+              <Navigation className="h-4.5 w-4.5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-black text-lg tracking-tight">BUZO</span>
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
-                  COCKPIT
+              <div className="flex items-center gap-1.5">
+                <span className="font-sans font-bold text-base tracking-tight text-foreground">Buzo</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground border border-border">
+                  Cockpit
                 </span>
               </div>
-              <p className="text-[10px] text-muted-foreground font-medium">In-Cab Transit Navigation</p>
+              <p className="text-[11px] text-muted-foreground font-medium">In-Cab Transit Navigation</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
             {/* Live Telemetry Ping */}
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-semibold">
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
               <Radio className="w-3 h-3 animate-pulse" />
               <span>Telemetry Connected</span>
             </div>
@@ -290,8 +291,10 @@ export function DashboardPage() {
               </a>
             </div>
 
+            <ModeToggle />
+
             {/* Driver Profile */}
-            <div className="flex items-center gap-2 pl-2">
+            <div className="flex items-center gap-2 pl-1">
               <div className="h-8 w-8 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
                 {user?.name?.[0] || "D"}
               </div>

@@ -276,7 +276,7 @@ export function ChatbotWidget() {
                 <div
                   className={`rounded-2xl px-4 py-2.5 max-w-[80%] text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === "user"
-                      ? "bg-primary text-white rounded-br-sm"
+                      ? "bg-primary text-primary-foreground rounded-br-sm shadow-xs"
                       : "bg-muted text-foreground rounded-bl-sm"
                   }`}
                 >
@@ -308,7 +308,7 @@ export function ChatbotWidget() {
                     <div className="mt-3">
                       <Button 
                         size="sm" 
-                        className="w-full bg-white text-primary hover:bg-white/90"
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                         onClick={async () => {
                           try {
                             const { data } = await api.post("/payments/create-checkout-session", {

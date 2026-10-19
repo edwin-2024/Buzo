@@ -7,6 +7,14 @@ import { Toaster } from '@/components/ui/sonner'
 import App from './App.tsx'
 import './index.css'
 
+// Initialize theme from localStorage before render
+const savedTheme = localStorage.getItem('theme')
+if (savedTheme === 'dark') {
+  document.documentElement.classList.add('dark')
+} else if (savedTheme === 'light') {
+  document.documentElement.classList.remove('dark')
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

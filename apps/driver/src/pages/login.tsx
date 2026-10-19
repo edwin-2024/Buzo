@@ -4,6 +4,7 @@ import { Navigation, Loader2, Eye, EyeOff, Zap, ExternalLink, ShieldCheck } from
 
 import { useAuthStore } from "../stores/auth.store"
 import { api } from "../lib/axios"
+import { ModeToggle } from "../components/mode-toggle"
 
 export function LoginPage() {
   const [email, setEmail] = useState("")
@@ -74,6 +75,9 @@ export function LoginPage() {
             >
               Admin Portal <ExternalLink className="w-2.5 h-2.5" />
             </a>
+            <div className="border-l border-border/80 pl-1.5 ml-1">
+              <ModeToggle />
+            </div>
           </div>
         </div>
 
