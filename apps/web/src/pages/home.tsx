@@ -9,11 +9,8 @@ import {
   ArrowLeftRight, 
   Check, 
   Search, 
-  ShieldCheck, 
   Wifi, 
-  VolumeX, 
   Armchair, 
-  Maximize2, 
   Zap, 
   ChevronDown, 
   ChevronUp, 
@@ -282,11 +279,11 @@ export function HomePage() {
                 </span>
               </h1>
               <p className="mx-auto max-w-[640px] text-muted-foreground text-base sm:text-lg font-normal leading-relaxed">
-                Single-occupancy leather suites, whisper-quiet cabin acoustics, and 15-minute curbside departures. Executive comfort between downtown centers.
+                Real-time GPS bus telemetry, guaranteed seat selection, and 15-minute curbside departures. Seamless transit across Bangalore express corridors.
               </p>
             </div>
 
-            {/* Concierge Search Bar */}
+            {/* Smart Transit Search Bar */}
             <Card className="w-full max-w-4xl card-luxe rounded-3xl overflow-hidden mt-4 shadow-xl">
               <CardContent className="p-5 sm:p-7 space-y-5">
                 <form onSubmit={handleSearch} className="space-y-5">
@@ -489,7 +486,7 @@ export function HomePage() {
                 15-min curbside boarding
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Direct-to-coach departures from dedicated executive bays. Bypass crowded concourses, TSA lines, and terminal luggage carousels.
+                Direct-to-coach departures from dedicated express bays. Bypass crowded concourses, ticket queues, and terminal delays.
               </p>
             </div>
 
@@ -498,22 +495,22 @@ export function HomePage() {
                 <Armchair className="w-5 h-5" />
               </div>
               <h3 className="font-bold text-sm text-foreground mt-2">
-                Zero middle seats
+                Guaranteed reserved seats
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Configured strictly in 1x1 and 1x2 private suite formats. Every passenger receives guaranteed unobstructed aisle access and direct windows.
+                Interactive seat map lets you choose your exact window or aisle seat before booking. No standing crowds, no overbooking.
               </p>
             </div>
 
             <div className="flex flex-col p-5 rounded-2xl bg-card border border-border space-y-2 text-left">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground">
-                <VolumeX className="w-5 h-5" />
+                <Radio className="w-5 h-5" />
               </div>
               <h3 className="font-bold text-sm text-foreground mt-2">
-                Quiet cabin protocol
+                Live GPS bus radar
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Calibrated acoustic isolation below 45dB. An enforced quiet zone policy allows uninterrupted rest, reading, or deep focus throughout.
+                1-second WebSocket vehicle telemetry. Track your coach's exact location, current speed, and stop arrivals with total accuracy.
               </p>
             </div>
 
@@ -522,33 +519,57 @@ export function HomePage() {
                 <Wifi className="w-5 h-5" />
               </div>
               <h3 className="font-bold text-sm text-foreground mt-2">
-                Starlink Wi-Fi
+                High-speed onboard Wi-Fi
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Low-latency satellite connectivity standard at every suite. Stream video, join client conferences, and work without dead zones.
+                Reliable onboard internet standard on every coach. Stream media, join calls, and work uninterrupted across all corridors.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* The Cabin Experience Showcase */}
+      {/* The Transit Experience Showcase */}
       <section className="py-20 md:py-24 border-b border-border/60 bg-background">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-2xl mb-14 text-left space-y-2">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Physical Suite Engineering
+              Smart Transit Capabilities
             </span>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
-              The Cabin Experience
+              The Transit Experience
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-              Every curve, fabric choice, and acoustic seal is calibrated to eliminate intercity travel fatigue.
+              Real-time telematics, verified seat reservations, and seamless digital boarding designed for effortless commuting.
             </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
-            {/* 150° leather recliners */}
+            {/* Live Satellite Radar */}
+            <div className="flex flex-col justify-between p-7 rounded-3xl bg-card border border-border space-y-6 shadow-xs hover:border-foreground/20 transition-colors text-left">
+              <div className="space-y-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-foreground">
+                  <Radio className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-mono font-semibold text-muted-foreground">
+                    REAL-TIME TELEMETRY
+                  </span>
+                  <h3 className="text-xl font-bold text-foreground">
+                    Live Satellite Radar
+                  </h3>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  1-second WebSocket GPS telemetry. Track your coach's exact location, current speed, and stop-by-stop arrival times with zero guesswork.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-border/60 text-[11px] text-muted-foreground flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-foreground shrink-0" />
+                Live 1-second WebSocket updates
+              </div>
+            </div>
+
+            {/* Guaranteed Reserved Seating */}
             <div className="flex flex-col justify-between p-7 rounded-3xl bg-card border border-border space-y-6 shadow-xs hover:border-foreground/20 transition-colors text-left">
               <div className="space-y-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-foreground">
@@ -556,94 +577,70 @@ export function HomePage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[11px] font-mono font-semibold text-muted-foreground">
-                    ERGONOMIC SUITE
+                    SEAT SELECTION
                   </span>
                   <h3 className="text-xl font-bold text-foreground">
-                    150° leather recliners
+                    Guaranteed Reserved Seating
                   </h3>
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Hand-stitched semi-aniline Italian leather with power leg rests and dual-zone lumbar support. Calibrated for zero-gravity resting angles that ease lower-back strain.
+                  Interactive seating map lets you choose your exact window or aisle seat before booking. No standing crowds, no overbooking.
                 </p>
               </div>
               <div className="pt-4 border-t border-border/60 text-[11px] text-muted-foreground flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-foreground shrink-0" />
-                Motorized pneumatic recline controls
+                Interactive seat map selection
               </div>
             </div>
 
-            {/* 48" pitch */}
+            {/* Paperless QR Boarding */}
             <div className="flex flex-col justify-between p-7 rounded-3xl bg-card border border-border space-y-6 shadow-xs hover:border-foreground/20 transition-colors text-left">
               <div className="space-y-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-foreground">
-                  <Maximize2 className="w-6 h-6" />
+                  <Zap className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
                   <span className="text-[11px] font-mono font-semibold text-muted-foreground">
-                    PERSONAL ENVELOPE
+                    DIGITAL PASS
                   </span>
                   <h3 className="text-xl font-bold text-foreground">
-                    48" pitch personal envelope
+                    Paperless QR Boarding
                   </h3>
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  More than double the legroom of domestic business aviation. No passenger in front reclines into your space, leaving your fold-out work table fully unobstructed.
+                  Optical QR boarding passes generated instantly upon checkout. Step straight onto your coach with seamless curbside verification.
                 </p>
               </div>
               <div className="pt-4 border-t border-border/60 text-[11px] text-muted-foreground flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-foreground shrink-0" />
-                Solid-surface fold-out executive desk
-              </div>
-            </div>
-
-            {/* Quiet cabin <45dB */}
-            <div className="flex flex-col justify-between p-7 rounded-3xl bg-card border border-border space-y-6 shadow-xs hover:border-foreground/20 transition-colors text-left">
-              <div className="space-y-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-foreground">
-                  <VolumeX className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[11px] font-mono font-semibold text-muted-foreground">
-                    ACOUSTIC SEALS
-                  </span>
-                  <h3 className="text-xl font-bold text-foreground">
-                    Quiet cabin &lt;45dB
-                  </h3>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Composite structural baffling, laminated acoustic double glazing, and air-suspension dampening reduce ambient highway noise to whisper level.
-                </p>
-              </div>
-              <div className="pt-4 border-t border-border/60 text-[11px] text-muted-foreground flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-foreground shrink-0" />
-                Sound-absorbing acoustic ceiling microfibers
+                Curbside optical scan verification
               </div>
             </div>
           </div>
 
-          {/* Suite Amenities Strip */}
+          {/* Transit Amenities Strip */}
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 rounded-2xl bg-secondary/50 border border-border text-left">
             <div className="flex items-center gap-3">
               <BatteryCharging className="w-4 h-4 text-foreground shrink-0" />
               <div>
-                <div className="text-xs font-semibold text-foreground">65W USB-C PD</div>
-                <div className="text-[10px] text-muted-foreground">At every suite seat</div>
+                <div className="text-xs font-semibold text-foreground">USB-C & AC Power</div>
+                <div className="text-[10px] text-muted-foreground">At every passenger seat</div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <Radio className="w-4 h-4 text-foreground shrink-0" />
               <div>
-                <div className="text-xs font-semibold text-foreground">GPS Live Radar</div>
+                <div className="text-xs font-semibold text-foreground">Live GPS Radar</div>
                 <div className="text-[10px] text-muted-foreground">1-sec satellite telemetry</div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <ShieldCheck className="w-4 h-4 text-foreground shrink-0" />
+              <Armchair className="w-4 h-4 text-foreground shrink-0" />
               <div>
-                <div className="text-xs font-semibold text-foreground">Zero Middle Seats</div>
-                <div className="text-[10px] text-muted-foreground">1x1 and 1x2 private rows</div>
+                <div className="text-xs font-semibold text-foreground">Guaranteed Seat</div>
+                <div className="text-[10px] text-muted-foreground">Interactive seat selection</div>
               </div>
             </div>
 
@@ -651,7 +648,7 @@ export function HomePage() {
               <Zap className="w-4 h-4 text-foreground shrink-0" />
               <div>
                 <div className="text-xs font-semibold text-foreground">Digital Boarding</div>
-                <div className="text-[10px] text-muted-foreground">Optical pass & PDF tax bill</div>
+                <div className="text-[10px] text-muted-foreground">QR pass & instant PDF invoice</div>
               </div>
             </div>
           </div>
@@ -670,7 +667,7 @@ export function HomePage() {
                 Curated Express Corridors
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Executive multi-axle coaches departing around the clock with fixed upfront pricing.
+                Modern multi-axle coaches departing around the clock with fixed upfront pricing.
               </p>
             </div>
             <Button 
@@ -692,8 +689,8 @@ export function HomePage() {
                 frequency: "Every 20 mins",
                 fare: "₹599",
                 tag: "Tech Corridor Express",
-                busType: "Volvo 9600 Multi-Axle Suite",
-                amenities: ["Starlink Wi-Fi", "150° Recline", "65W USB-C PD"]
+                busType: "Volvo Multi-Axle AC Glider",
+                amenities: ["Live GPS Radar", "AC Recliner", "USB-C Charging"]
               },
               {
                 from: "Electronic City",
@@ -703,8 +700,8 @@ export function HomePage() {
                 frequency: "Every 25 mins",
                 fare: "₹649",
                 tag: "Express Highway Line",
-                busType: "Scania Metrolink Executive",
-                amenities: ["Air Suspension", "Live GPS Radar", "Executive Desk"]
+                busType: "Scania Metrolink Express",
+                amenities: ["Air Suspension", "Real-Time Tracking", "Executive Seating"]
               },
               {
                 from: "Mekhri Circle",
@@ -713,9 +710,9 @@ export function HomePage() {
                 toQuery: "Airport",
                 frequency: "Hourly 24/7",
                 fare: "₹799",
-                tag: "Airport Direct Luxe",
-                busType: "Mercedes-Benz Luxury Glider",
-                amenities: ["Luggage Concierge", "Priority Curbside Bay", "Flight Radar"]
+                tag: "Airport Direct Express",
+                busType: "Airport Direct Express",
+                amenities: ["Priority Bay", "Flight Connect", "Luggage Bay"]
               },
             ].map((route, i) => (
               <Card 
@@ -784,7 +781,7 @@ export function HomePage() {
               The Buzo Difference
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground">
-              How executive road travel compares to short-haul aviation and legacy commercial coaches.
+              How smart express coach travel compares to short-haul aviation and standard commercial buses.
             </p>
           </div>
 
@@ -798,7 +795,7 @@ export function HomePage() {
                   <th className="p-4 sm:p-5 font-bold text-foreground bg-secondary/80">
                     <div className="flex items-center gap-1.5">
                       <Bus className="w-4 h-4 text-foreground" />
-                      <span>Buzo Executive</span>
+                      <span>Buzo Smart Transit</span>
                     </div>
                   </th>
                   <th className="p-4 sm:p-5 font-semibold text-muted-foreground">
@@ -810,7 +807,7 @@ export function HomePage() {
                   <th className="p-4 sm:p-5 font-semibold text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <Car className="w-4 h-4 text-muted-foreground" />
-                      <span>Commercial Buses</span>
+                      <span>Standard Buses</span>
                     </div>
                   </th>
                 </tr>
@@ -833,55 +830,40 @@ export function HomePage() {
 
                 <tr>
                   <td className="p-4 sm:p-5 font-medium text-foreground">
-                    Seat pitch & recline
+                    Seat selection & comfort
                   </td>
                   <td className="p-4 sm:p-5 font-semibold text-foreground bg-secondary/30">
-                    48" pitch · 150° power leather recline
+                    Guaranteed reserved recliners · interactive seat map
                   </td>
                   <td className="p-4 sm:p-5 text-muted-foreground">
-                    30"–34" tight pitch · 10° recline
+                    Narrow pitch · paid seat selection fees
                   </td>
                   <td className="p-4 sm:p-5 text-muted-foreground">
-                    28"–31" pitch · limited manual recline
+                    Cramped seats · unreserved or chaotic boarding
                   </td>
                 </tr>
 
                 <tr>
                   <td className="p-4 sm:p-5 font-medium text-foreground">
-                    Seating layout
+                    Live transit tracking
                   </td>
                   <td className="p-4 sm:p-5 font-semibold text-foreground bg-secondary/30">
-                    1x1 & 1x2 (Zero middle seats)
+                    1-sec WebSocket GPS radar · live stop arrival times
                   </td>
                   <td className="p-4 sm:p-5 text-muted-foreground">
-                    3x3 with middle seat squeeze
+                    Periodic gate announcements & flight trackers
                   </td>
                   <td className="p-4 sm:p-5 text-muted-foreground">
-                    2x2 cramped bench layout
+                    No live tracking · unknown arrival delays
                   </td>
                 </tr>
 
                 <tr>
                   <td className="p-4 sm:p-5 font-medium text-foreground">
-                    Cabin sound ceiling
+                    Power & Wi-Fi
                   </td>
                   <td className="p-4 sm:p-5 font-semibold text-foreground bg-secondary/30">
-                    &lt;45dB quiet protocol enforced
-                  </td>
-                  <td className="p-4 sm:p-5 text-muted-foreground">
-                    80–85dB engine drone
-                  </td>
-                  <td className="p-4 sm:p-5 text-muted-foreground">
-                    75–80dB highway & horn noise
-                  </td>
-                </tr>
-
-                <tr>
-                  <td className="p-4 sm:p-5 font-medium text-foreground">
-                    Wi-Fi & power delivery
-                  </td>
-                  <td className="p-4 sm:p-5 font-semibold text-foreground bg-secondary/30">
-                    Free Starlink satellite + 65W USB-C
+                    High-speed onboard Wi-Fi + USB-C at every seat
                   </td>
                   <td className="p-4 sm:p-5 text-muted-foreground">
                     Paid / inconsistent in-flight Wi-Fi
@@ -893,25 +875,10 @@ export function HomePage() {
 
                 <tr>
                   <td className="p-4 sm:p-5 font-medium text-foreground">
-                    City connectivity
-                  </td>
-                  <td className="p-4 sm:p-5 font-semibold text-foreground bg-secondary/30">
-                    Downtown-to-downtown direct
-                  </td>
-                  <td className="p-4 sm:p-5 text-muted-foreground">
-                    Peripheral airport + taxi transfers
-                  </td>
-                  <td className="p-4 sm:p-5 text-muted-foreground">
-                    Uncoordinated suburban stops
-                  </td>
-                </tr>
-
-                <tr>
-                  <td className="p-4 sm:p-5 font-medium text-foreground">
                     Fare transparency
                   </td>
                   <td className="p-4 sm:p-5 font-semibold text-foreground bg-secondary/30">
-                    Upfront price · zero hidden fees
+                    Upfront price · zero hidden booking fees
                   </td>
                   <td className="p-4 sm:p-5 text-muted-foreground">
                     Base fare + bag + seat assignment fees
@@ -940,20 +907,20 @@ export function HomePage() {
         <div className="space-y-3">
           {[
             {
-              q: "Can I choose my specific suite on the coach?",
-              a: "Yes. Buzo features a live interactive seat selector. You can choose single window suites (1x1), companion suites (1x2), or front-row suites with extended legroom.",
+              q: "Can I choose my specific seat on the coach?",
+              a: "Yes. Buzo features a live interactive seat selector. You can choose window or aisle seats, companion pairs, or front-row seats before booking.",
             },
             {
               q: "How does real-time coach radar work?",
               a: "Every operating coach broadcasts live GPS coordinates via WebSockets once per second. You can track exact location, road speed, and up-to-the-minute station arrival ETAs directly from our tracking page.",
             },
             {
-              q: "What is the quiet cabin protocol?",
-              a: "To ensure all travelers can work or sleep undisturbed, phone calls are restricted to the designated forward vestibule. All cabin media is personal-audio-only with headphones.",
+              q: "What amenities are provided on board?",
+              a: "All Buzo coaches are equipped with climate-controlled AC, high-speed Wi-Fi, individual USB-C charging ports at every seat, and generous luggage bays.",
             },
             {
               q: "Do I need a printed ticket to board?",
-              a: "No. Show your digital boarding pass with optical barcode on your mobile device. The coach captain will verify your reservation at the curbside door.",
+              a: "No. Show your digital boarding pass with optical QR code on your mobile device. The coach captain will verify your reservation at the curbside door.",
             },
           ].map((faq, fIdx) => {
             const isOpen = openFaq === fIdx
@@ -989,10 +956,10 @@ export function HomePage() {
       <section className="py-16 md:py-20 bg-secondary/50 border-t border-border/60">
         <div className="container mx-auto px-4 sm:px-6 text-center space-y-5 max-w-2xl">
           <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-            Reserve your suite for your next journey
+            Reserve your seat for your next journey
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
-            Search schedules across our express routes and secure your guaranteed private recliner in less than 60 seconds.
+            Search schedules across our express routes and secure your guaranteed reserved seat in less than 60 seconds.
           </p>
           <div className="pt-2">
             <Button 
