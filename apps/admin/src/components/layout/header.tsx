@@ -5,6 +5,7 @@ import { Bell, Menu, ExternalLink, Radio, Search, ShieldCheck } from "lucide-rea
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/stores/auth.store"
 import { CommandPalette } from "@/components/command-palette"
+import { ModeToggle } from "./mode-toggle"
 
 export function Header({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }) {
   const location = useLocation()
@@ -82,6 +83,8 @@ export function Header({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) =>
               Driver Cockpit <ExternalLink className="w-3 h-3 opacity-70" />
             </a>
           </div>
+
+          <ModeToggle />
 
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
             <span className="sr-only">View notifications</span>

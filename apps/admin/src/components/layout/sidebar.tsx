@@ -38,25 +38,25 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v:
     )}>
       {/* Brand Header */}
       <div className="flex h-16 shrink-0 items-center gap-3 px-6 border-b border-border/40">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary via-blue-600 to-indigo-700 flex items-center justify-center shadow-md shadow-primary/20">
-          <Bus className="h-5 w-5 text-white" />
+        <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+          <Bus className="h-4.5 w-4.5" />
         </div>
         <div>
           <div className="flex items-center gap-1.5">
-            <span className="text-lg font-black tracking-tight text-foreground font-mono">BUZO</span>
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
-              OPS
+            <span className="text-base font-bold tracking-tight text-foreground font-sans">Buzo</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-secondary text-secondary-foreground border border-border">
+              Operations
             </span>
           </div>
-          <p className="text-[10px] text-muted-foreground font-medium">Dispatch Operations</p>
+          <p className="text-[11px] text-muted-foreground font-medium">Fleet Dispatch Control</p>
         </div>
       </div>
       
       {/* Navigation Links */}
       <div className="flex flex-1 flex-col overflow-y-auto px-3 py-4 space-y-6">
         <div>
-          <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
-            Navigation
+          <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">
+            Control Center
           </p>
           <nav className="space-y-1">
             {navItems.map((item) => (
@@ -65,24 +65,24 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v:
                 to={item.href}
                 className={({ isActive }) =>
                   cn(
-                    "group flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-150",
+                    "group flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-all duration-150",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
-                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   )
                 }
                 onClick={() => setIsOpen(false)}
               >
                 {({ isActive }) => (
                   <>
-                    <div className="flex items-center gap-3">
-                      <item.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-105", isActive ? "text-primary-foreground" : "text-primary")} />
+                    <div className="flex items-center gap-2.5">
+                      <item.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-105", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
                       <span>{item.name}</span>
                     </div>
                     {item.badge && (
                       <span className={cn(
-                        "text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wider animate-pulse",
-                        isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                        "text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded-full tracking-wider",
+                        isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                       )}>
                         {item.badge}
                       </span>
@@ -95,13 +95,13 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v:
         </div>
 
         {/* Engine status teaser */}
-        <div className="p-3.5 rounded-xl bg-gradient-to-br from-secondary/60 to-secondary/20 border border-border/50 space-y-2">
-          <div className="flex items-center gap-2 text-[11px] font-bold text-foreground">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span>High-Speed Monorepo</span>
+        <div className="p-3.5 rounded-xl bg-secondary/50 border border-border/70 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+            <Sparkles className="w-3.5 h-3.5 text-foreground" />
+            <span>Telemetry Link</span>
           </div>
-          <p className="text-[10px] text-muted-foreground leading-relaxed">
-            Turborepo + Socket.IO real-time telemetry running in tandem with Passenger and Driver portals.
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Real-time WebSocket telemetry syncing with Passenger portal and Driver cockpit.
           </p>
         </div>
       </div>
