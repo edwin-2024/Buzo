@@ -1,8 +1,15 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 
+export class AppError extends Error {
+    constructor(public statusCode: number, message: string) {
+        super(message);
+        this.name = "AppError";
+    }
+}
+
 export function errorHandler(
-    err: any,
+    err: unknown,
     _req: Request,
     res: Response,
     _next: NextFunction
@@ -19,23 +26,31 @@ export function errorHandler(
         });
     }
 
-    // 2. Prisma known request errors
-    if (err?.code === "P2002") {
-        return res.status(409).json({
-            message: "A unique constraint violation occurred",
-            fields: err.meta?.target,
+    // 2. Explicit AppError instances
+    if (err instanceof AppError) {
+        return res.status(err.statusCode).json({
+            message: err.message,
         });
     }
 
-    if (err?.code === "P2025") {
+    // 3. Prisma known request errors
+    const errorRecord = err as { code?: string; meta?: { target?: unknown }; message?: string; statusCode?: number; status?: number };
+    if (errorRecord?.code === "P2002") {
+        return res.status(409).json({
+            message: "A unique constraint violation occurred",
+            fields: errorRecord.meta?.target,
+        });
+    }
+
+    if (errorRecord?.code === "P2025") {
         return res.status(404).json({
             message: "Record not found",
         });
     }
 
-    // 3. Known domain / service errors
-    const errorMessage = typeof err === "string" ? err : err?.message || "Internal server error";
-    const statusCode = err?.statusCode || err?.status || (
+    // 4. Known domain / service errors
+    const errorMessage = typeof err === "string" ? err : errorRecord?.message || "Internal server error";
+    const statusCode = errorRecord?.statusCode || errorRecord?.status || (
         errorMessage.toLowerCase().includes("not found") ? 404 :
         errorMessage.toLowerCase().includes("already booked") ||
         errorMessage.toLowerCase().includes("no longer available") ||

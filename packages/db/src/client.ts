@@ -18,9 +18,11 @@ if (globalForPrisma.prisma) {
             if (endpoint && !u.searchParams.has("options")) {
                 u.searchParams.set("options", `endpoint=${endpoint}`);
             }
-            // Use AWS US-East-1 Neon Pooler direct IP to bypass local router DNS query refusal (RCODE_REFUSED on Windows)
-            u.hostname = "52.45.105.76";
-            connectionString = u.toString();
+            // Use direct IP fallback if explicitly set or on Windows local development where router DNS refuses Neon CNAMEs
+            if (process.env.NEON_DIRECT_IP || (process.platform === "win32" && process.env.NODE_ENV !== "production")) {
+                u.hostname = process.env.NEON_DIRECT_IP || "52.45.105.76";
+                connectionString = u.toString();
+            }
         }
     } catch (e) {
         console.warn("Failed to parse DATABASE_URL for Neon endpoint fallback:", e);

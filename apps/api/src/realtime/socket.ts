@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import { type SeatStatus } from "@buzo/db";
 import { registerBusSocket } from "./bus.socket";
 
 let io: Server;
@@ -23,7 +24,7 @@ export function getIO() {
     return io;
 }
 
-export function broadcastSeatUpdate(tripId: string, seatIds: string[], status: string) {
+export function broadcastSeatUpdate(tripId: string, seatIds: string[], status: SeatStatus | string) {
     try {
         if (!io) return;
         const payload = { tripId, seatIds, status, timestamp: new Date().toISOString() };

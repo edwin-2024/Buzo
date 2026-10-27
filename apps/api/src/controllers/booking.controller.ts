@@ -4,6 +4,11 @@ import { bookingService } from "../services/booking.service";
 import { receiptService } from "../services/receipt.service";
 import { createBookingSchema } from "../validation/booking.schema";
 
+function canAccessBooking(booking: { passengerId: string }, user?: { userId: string; role: string }) {
+    if (!user) return false;
+    return booking.passengerId === user.userId || user.role === "ADMIN";
+}
+
 export class BookingController {
     getAll = async (
         req: Request,
@@ -50,7 +55,7 @@ export class BookingController {
                 return res.status(404).json({ message: "Booking not found" });
             }
 
-            if (booking.passengerId !== req.user.userId && req.user.role !== "ADMIN") {
+            if (!canAccessBooking(booking, req.user)) {
                 return res.status(403).json({
                     message: "Forbidden: You do not have permission to view this booking",
                 });
@@ -123,7 +128,7 @@ export class BookingController {
                 return res.status(404).json({ message: "Booking not found" });
             }
 
-            if (booking.passengerId !== req.user.userId && req.user.role !== "ADMIN") {
+            if (!canAccessBooking(booking, req.user)) {
                 return res.status(403).json({
                     message: "Forbidden: You do not have permission to delete this booking",
                 });
