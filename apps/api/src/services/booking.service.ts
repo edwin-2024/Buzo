@@ -57,9 +57,6 @@ export class BookingService {
             if (seat.tripId !== input.tripId) {
                 throw new Error(`Seat ${seatId} does not belong to this trip`);
             }
-            if (seat.status !== SeatStatus.AVAILABLE) {
-                throw new Error(`Seat ${seatId} is already reserved or booked`);
-            }
             seats.push(seat);
         }
 
@@ -100,8 +97,15 @@ export class BookingService {
 
         if (result.releasedCount > 0) {
             console.log(`🧹 Reclaimed ${result.releasedCount} expired seat reservations.`);
-            for (const tId of result.tripIds) {
-                broadcastSeatUpdate(tId, result.seatIds, SeatStatus.AVAILABLE);
+            const tripSeatMap = (result as any).tripSeatMap as [string, string[]][] | undefined;
+            if (tripSeatMap && tripSeatMap.length > 0) {
+                for (const [tId, tSeatIds] of tripSeatMap) {
+                    broadcastSeatUpdate(tId, tSeatIds, SeatStatus.AVAILABLE);
+                }
+            } else {
+                for (const tId of result.tripIds) {
+                    broadcastSeatUpdate(tId, result.seatIds, SeatStatus.AVAILABLE);
+                }
             }
         }
 

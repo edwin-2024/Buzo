@@ -11,6 +11,24 @@ const safePassengerSelect = {
 };
 
 export class BookingRepository {
+    private async releasePendingSeats(
+        tx: Prisma.TransactionClient,
+        bookingIds: string[],
+        seatIds: string[]
+    ) {
+        if (bookingIds.length > 0) {
+            await tx.booking.deleteMany({
+                where: { id: { in: bookingIds } },
+            });
+        }
+        if (seatIds.length > 0) {
+            await tx.seat.updateMany({
+                where: { id: { in: seatIds } },
+                data: { status: SeatStatus.AVAILABLE },
+            });
+        }
+    }
+
     async findAll() {
         return prisma.booking.findMany({
             include: {
@@ -67,13 +85,7 @@ export class BookingRepository {
                 const expiredBookingIds = expiredOnSeats.map((b) => b.id);
                 const expiredSeatIds = expiredOnSeats.map((b) => b.seatId);
 
-                await tx.booking.deleteMany({
-                    where: { id: { in: expiredBookingIds } },
-                });
-                await tx.seat.updateMany({
-                    where: { id: { in: expiredSeatIds } },
-                    data: { status: SeatStatus.AVAILABLE },
-                });
+                await this.releasePendingSeats(tx, expiredBookingIds, expiredSeatIds);
             }
 
             // Step 2: Atomic conditional update with row-level locks
@@ -139,13 +151,7 @@ export class BookingRepository {
 
             if (isExpired) {
                 const seatIds = pendingBookings.map((b) => b.seatId);
-                await tx.booking.deleteMany({
-                    where: { id: { in: pendingBookings.map((b) => b.id) } },
-                });
-                await tx.seat.updateMany({
-                    where: { id: { in: seatIds } },
-                    data: { status: SeatStatus.AVAILABLE },
-                });
+                await this.releasePendingSeats(tx, pendingBookings.map((b) => b.id), seatIds);
                 throw new Error("Reservation has expired (10-minute hold exceeded). Please select your seats again.");
             }
 
@@ -184,21 +190,22 @@ export class BookingRepository {
         });
 
         if (expiredBookings.length === 0) {
-            return { releasedCount: 0, seatIds: [], tripIds: [] };
+            return { releasedCount: 0, seatIds: [], tripIds: [], tripSeatMap: [] };
         }
 
         const bookingIds = expiredBookings.map((b) => b.id);
         const seatIds = expiredBookings.map((b) => b.seatId);
         const tripIds = Array.from(new Set(expiredBookings.map((b) => b.tripId)));
 
+        const map = new Map<string, string[]>();
+        for (const b of expiredBookings) {
+            const list = map.get(b.tripId) || [];
+            list.push(b.seatId);
+            map.set(b.tripId, list);
+        }
+
         await prisma.$transaction(async (tx) => {
-            await tx.booking.deleteMany({
-                where: { id: { in: bookingIds } },
-            });
-            await tx.seat.updateMany({
-                where: { id: { in: seatIds } },
-                data: { status: SeatStatus.AVAILABLE },
-            });
+            await this.releasePendingSeats(tx, bookingIds, seatIds);
         }, {
             maxWait: 10000,
             timeout: 20000,
@@ -208,6 +215,7 @@ export class BookingRepository {
             releasedCount: expiredBookings.length,
             seatIds,
             tripIds,
+            tripSeatMap: Array.from(map.entries()),
         };
     }
 
@@ -229,13 +237,7 @@ export class BookingRepository {
             const bookingIds = pendingBookings.map((b) => b.id);
             const seatIds = pendingBookings.map((b) => b.seatId);
 
-            await tx.booking.deleteMany({
-                where: { id: { in: bookingIds } },
-            });
-            await tx.seat.updateMany({
-                where: { id: { in: seatIds } },
-                data: { status: SeatStatus.AVAILABLE },
-            });
+            await this.releasePendingSeats(tx, bookingIds, seatIds);
 
             return seatIds;
         });

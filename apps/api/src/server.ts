@@ -10,12 +10,17 @@ const server = http.createServer(app);
 
 initializeSocket(server);
 
-// Start background reservation expiry sweeper
+// Start background reservation expiry sweeper with concurrency guard
+let isSweeping = false;
 export const expirySweeperTimer = setInterval(async () => {
+    if (isSweeping) return;
+    isSweeping = true;
     try {
         await bookingService.cleanupExpiredReservations();
     } catch (err) {
         console.error("Reservation expiry sweeper error:", err);
+    } finally {
+        isSweeping = false;
     }
 }, RESERVATION_SWEEPER_INTERVAL_MS);
 
