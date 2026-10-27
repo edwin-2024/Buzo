@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { Check, ShieldCheck, Loader2, Armchair, Bus, Sparkles, AlertCircle } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { io } from "socket.io-client"
+import { Check, ShieldCheck, Loader2, Armchair, Bus, Sparkles, AlertCircle, Clock } from "lucide-react"
 import { toast } from "sonner"
 
 import { api } from "@/lib/axios"
@@ -22,6 +23,7 @@ import { Badge } from "@/components/ui/badge"
 export function BookingPage() {
   const { tripId } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useAuthStore()
   
   const [selectedSeats, setSelectedSeats] = useState<string[]>([])
@@ -44,8 +46,35 @@ export function BookingPage() {
       const { data } = await api.get(`/trips/${tripId}/seats`)
       return data
     },
-    enabled: !!tripId
+    enabled: !!tripId,
+    placeholderData: (prev) => prev,
+    staleTime: 5000
   })
+
+  // Real-time live seat updates via Socket.io
+  useEffect(() => {
+    if (!tripId) return
+    const socketUrl = import.meta.env.VITE_API_URL || "http://localhost:3000"
+    const socket = io(socketUrl)
+
+    socket.emit("trip:join", tripId)
+
+    socket.on("seats:updated", (data: any) => {
+      if (data && data.tripId === tripId) {
+        queryClient.setQueryData(["seats", tripId], (oldSeats: any) => {
+          if (!Array.isArray(oldSeats)) return oldSeats
+          return oldSeats.map((s: any) =>
+            data.seatIds?.includes(s.id) ? { ...s, status: data.status } : s
+          )
+        })
+      }
+    })
+
+    return () => {
+      socket.emit("trip:leave", tripId)
+      socket.disconnect()
+    }
+  }, [tripId, queryClient])
 
   const bookMutation = useMutation({
     mutationFn: async (seatIds: string[]) => {
@@ -56,11 +85,15 @@ export function BookingPage() {
       return data
     },
     onSuccess: () => {
-      toast.success("Seats reserved! Complete payment to confirm your booking.")
+      queryClient.invalidateQueries({ queryKey: ["seats", tripId] })
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] })
+      toast.success("Seats reserved! You have 10 minutes to complete checkout.")
       navigate(`/payment?tripId=${tripId}`)
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to book seats. They might have been taken.")
+      queryClient.invalidateQueries({ queryKey: ["seats", tripId] })
+      const errorMsg = error.response?.data?.message || "Failed to hold seats. They may have been taken by another traveler."
+      toast.error(errorMsg)
     }
   })
 
@@ -107,7 +140,9 @@ export function BookingPage() {
 
   const renderSeatButton = (num: number) => {
     const seat = seats?.find((s: any) => s.seatNumber === num)
-    const isBooked = !seat || seat.status !== "AVAILABLE"
+    const isBooked = seat?.status === "BOOKED"
+    const isReserved = seat?.status === "RESERVED"
+    const isUnavailable = !seat || isBooked || isReserved
     const isSelected = seat && selectedSeats.includes(seat.id)
     const pricing = resolveSeatPricing(seat, num)
     const isFrontRow = num >= 1 && num <= 8
@@ -117,16 +152,18 @@ export function BookingPage() {
       <button
         key={num}
         type="button"
-        disabled={isBooked}
+        disabled={isUnavailable}
         onMouseEnter={() => setHoveredSeat(num)}
         onMouseLeave={() => setHoveredSeat(prev => prev === num ? null : prev)}
         title={
           isBooked
-            ? `Seat ${num} (Booked)`
-            : `Seat ${num} • ${pricing.name} (₹${pricing.price})`
+            ? `Seat ${num} (Confirmed Booked)`
+            : isReserved
+              ? `Seat ${num} • Held in Checkout (Hold Expires in ~10m)`
+              : `Seat ${num} • ${pricing.name} (₹${pricing.price})`
         }
         onClick={() => {
-          if (!seat) return
+          if (!seat || isUnavailable) return
           setSelectedSeats(prev =>
             prev.includes(seat.id)
               ? prev.filter(id => id !== seat.id)
@@ -134,24 +171,33 @@ export function BookingPage() {
           )
         }}
         className={`
-          relative w-11 h-13 rounded-t-xl rounded-b-md border-2 font-bold text-xs transition-all duration-150 flex flex-col items-center justify-center select-none
+          relative w-11 h-14 rounded-t-xl rounded-b-md border-2 font-bold text-xs transition-colors duration-100 flex flex-col items-center justify-center select-none
           ${isBooked
             ? "bg-muted/60 text-muted-foreground/30 border-muted/50 cursor-not-allowed"
-            : isSelected
-              ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 scale-105 ring-2 ring-primary/40 cursor-pointer active:scale-95"
-              : isFrontRow
-                ? "border-amber-400/80 bg-amber-500/10 hover:border-amber-400 text-foreground hover:scale-105 shadow-xs cursor-pointer active:scale-95"
-                : "bg-background/90 hover:border-primary/70 hover:bg-primary/10 border-input text-foreground hover:scale-105 cursor-pointer active:scale-95 shadow-2xs"}
+            : isReserved
+              ? "bg-amber-500/15 border-amber-500/50 text-amber-600 dark:text-amber-400 cursor-not-allowed shadow-2xs"
+              : isSelected
+                ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/40 cursor-pointer"
+                : isFrontRow
+                  ? "border-amber-400/80 bg-amber-500/10 hover:border-amber-400 hover:bg-amber-500/20 text-foreground shadow-xs cursor-pointer"
+                  : "bg-background/90 hover:border-primary/80 hover:bg-primary/10 border-input text-foreground cursor-pointer shadow-2xs"}
         `}
       >
+        {/* Reserved hold indicator */}
+        {isReserved && (
+          <span className="absolute top-1 left-1 flex items-center pointer-events-none" title="Hold Active">
+            <Clock className="w-2.5 h-2.5 text-amber-500 animate-pulse" />
+          </span>
+        )}
+
         {/* Front row premium gold sparkle indicator */}
-        {isFrontRow && !isBooked && (
+        {isFrontRow && !isUnavailable && (
           <span className="absolute top-1 left-1 flex items-center pointer-events-none" title="Premium Front">
             <Sparkles className={`w-2.5 h-2.5 ${isSelected ? "text-primary-foreground/90 fill-primary-foreground/50" : "text-amber-500 fill-amber-500"}`} />
           </span>
         )}
         {/* Window indicator blue dot */}
-        {isWindow && !isBooked && (
+        {isWindow && !isUnavailable && (
           <span
             className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full pointer-events-none ${isSelected ? "bg-white" : "bg-blue-500"}`}
             title="Window Seat"
@@ -201,7 +247,7 @@ export function BookingPage() {
                       <Armchair className="w-5 h-5 text-primary" /> Interactive Seat Selector
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      Choose your preferred seats. Premium Front seats include extra legroom and priority deboarding.
+                      Choose your preferred seats. Selecting a seat places a 10-minute hold for your session.
                     </CardDescription>
                   </div>
                   <div className="hidden sm:flex bg-muted/60 p-1 rounded-xl text-xs font-medium border gap-0.5">
@@ -231,22 +277,10 @@ export function BookingPage() {
               </CardHeader>
               <CardContent className="pt-6">
                 {/* Expanded Seat Legend */}
-                <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-5 mb-8 text-xs font-medium bg-muted/20 py-3 px-4 rounded-xl border">
+                <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 mb-8 text-xs font-medium bg-muted/20 py-3 px-4 rounded-xl border">
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-md border-2 border-input bg-background shadow-xs"></div>
-                    <span>Available (Aisle ₹599)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-5 h-5 rounded-md border-2 border-input bg-background shadow-xs">
-                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                    </div>
-                    <span>Window (₹649)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-5 h-5 rounded-md border-2 border-amber-400/80 bg-amber-500/10 shadow-xs flex items-center justify-center">
-                      <Sparkles className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
-                    </div>
-                    <span>Premium Front (₹699–₹749)</span>
+                    <span>Available</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-[10px] shadow-sm">
@@ -255,58 +289,67 @@ export function BookingPage() {
                     <span>Selected</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-md border-2 border-amber-400 bg-amber-500/20 flex items-center justify-center">
+                      <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <span>Held in Checkout</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-md bg-muted border border-muted-foreground/20 opacity-60"></div>
-                    <span>Booked</span>
+                    <span>Confirmed Booked</span>
                   </div>
                 </div>
 
-                {/* Interactive Seat Inspector Banner */}
-                {(() => {
-                  const activeNum = hoveredSeat || (selectedSeats.length > 0 ? seats?.find((s: any) => s.id === selectedSeats[selectedSeats.length - 1])?.seatNumber : null)
-                  if (!activeNum) {
+                {/* Interactive Seat Inspector Banner (Fixed height to eliminate layout shifts) */}
+                <div className="max-w-md mx-auto mb-4 h-[76px] rounded-2xl border-2 transition-all duration-200 overflow-hidden flex items-center bg-card shadow-xs">
+                  {(() => {
+                    const activeNum = hoveredSeat || (selectedSeats.length > 0 ? seats?.find((s: any) => s.id === selectedSeats[selectedSeats.length - 1])?.seatNumber : null)
+                    if (!activeNum) {
+                      return (
+                        <div className="w-full h-full flex items-center justify-center gap-2 p-3 text-center text-xs text-muted-foreground bg-muted/20">
+                          <Armchair className="w-4 h-4 text-primary shrink-0" />
+                          <span>Hover or tap any seat to inspect pricing, legroom, and perks</span>
+                        </div>
+                      )
+                    }
+                    const activeSeat = seats?.find((s: any) => s.seatNumber === activeNum)
+                    const isBooked = activeSeat?.status === "BOOKED"
+                    const isReserved = activeSeat?.status === "RESERVED"
+                    const isSelected = activeSeat && selectedSeats.includes(activeSeat.id)
+                    const pricing = resolveSeatPricing(activeSeat, activeNum)
+
                     return (
-                      <div className="max-w-md mx-auto mb-4 p-3 rounded-2xl bg-muted/30 border border-dashed text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-                        <Armchair className="w-4 h-4 text-primary" />
-                        <span>Hover or tap any seat to inspect pricing, legroom, and perks</span>
+                      <div className="w-full h-full p-3.5 flex items-center justify-between border-primary/30">
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-extrabold text-sm text-foreground shrink-0">Seat {activeNum}</span>
+                            <Badge variant="outline" className="text-[10px] font-semibold bg-primary/10 text-primary border-primary/20 shrink-0">
+                              {pricing.name}
+                            </Badge>
+                            {isBooked ? (
+                              <Badge variant="destructive" className="text-[9px]">Booked</Badge>
+                            ) : isReserved ? (
+                              <Badge variant="outline" className="text-[9px] text-amber-600 bg-amber-500/10 border-amber-500/30 flex items-center gap-1 shrink-0">
+                                <Clock className="w-2.5 h-2.5" /> Held in Checkout
+                              </Badge>
+                            ) : isSelected ? (
+                              <Badge variant="default" className="text-[9px] bg-primary">Selected</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[9px] text-emerald-600 bg-emerald-500/10 border-emerald-500/20">Available</Badge>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-1 truncate">
+                            {pricing.perks.join(" • ")}
+                          </div>
+                        </div>
+                        <div className="text-right pl-3 border-l shrink-0">
+                          <span className="text-[10px] text-muted-foreground block">Fare</span>
+                          <div className="text-lg font-black text-primary leading-tight">₹{pricing.price}</div>
+                        </div>
                       </div>
                     )
-                  }
-                  const activeSeat = seats?.find((s: any) => s.seatNumber === activeNum)
-                  const isBooked = !activeSeat || activeSeat.status !== "AVAILABLE"
-                  const isSelected = activeSeat && selectedSeats.includes(activeSeat.id)
-                  const pricing = resolveSeatPricing(activeSeat, activeNum)
-
-                  return (
-                    <div className="max-w-md mx-auto mb-4 p-3.5 rounded-2xl bg-card border-2 border-primary/30 shadow-xs flex items-center justify-between animate-in fade-in">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm text-foreground">Seat {activeNum}</span>
-                          <Badge variant="outline" className="text-[10px] font-semibold bg-primary/10 text-primary border-primary/20">
-                            {pricing.name}
-                          </Badge>
-                          {isBooked ? (
-                            <Badge variant="destructive" className="text-[9px]">Booked</Badge>
-                          ) : isSelected ? (
-                            <Badge variant="default" className="text-[9px] bg-primary">Selected</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[9px] text-emerald-600 bg-emerald-500/10 border-emerald-500/20">Available</Badge>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap gap-1">
-                          {pricing.perks.map((perk, pI) => (
-                            <span key={pI} className="bg-muted px-1.5 py-0.5 rounded text-[10px]">
-                              • {perk}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="text-right pl-3 border-l shrink-0">
-                        <span className="text-[10px] text-muted-foreground">Fare</span>
-                        <div className="text-lg font-black text-primary">₹{pricing.price}</div>
-                      </div>
-                    </div>
-                  )
-                })()}
+                  })()}
+                </div>
                 
                 {/* Realistic Bus Chassis */}
                 <div className="max-w-md mx-auto bg-card border-2 border-border/80 rounded-4xl p-6 sm:p-8 pb-10 relative shadow-inner">
@@ -315,7 +358,6 @@ export function BookingPage() {
                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
                        <Bus className="w-4 h-4 text-primary" /> Front of Bus
                      </div>
-                     {/* Steering Wheel graphic */}
                      <div className="relative w-8 h-8 rounded-full border-3 border-muted-foreground/60 flex items-center justify-center shadow-xs">
                        <div className="w-2 h-2 rounded-full bg-muted-foreground/80"></div>
                        <div className="absolute w-full h-0.5 bg-muted-foreground/50"></div>
@@ -336,17 +378,14 @@ export function BookingPage() {
 
                        return (
                          <div key={rowIndex} className="flex items-center justify-between gap-2 sm:gap-4 px-2">
-                           {/* Left Pair */}
                            <div className="flex items-center gap-2 sm:gap-3">
                              {rowSeats.slice(0, 2).map(renderSeatButton)}
                            </div>
 
-                           {/* Aisle Spacer */}
                            <div className="flex-1 flex items-center justify-center">
                              <div className="h-6 w-0.5 border-r border-dashed border-muted-foreground/20"></div>
                            </div>
 
-                           {/* Right Pair */}
                            <div className="flex items-center gap-2 sm:gap-3">
                              {rowSeats.slice(2, 4).map(renderSeatButton)}
                            </div>
@@ -355,7 +394,6 @@ export function BookingPage() {
                      })}
                    </div>
 
-                   {/* Rear Exit Indicator */}
                    <div className="mt-8 pt-4 border-t border-dashed flex justify-center text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                      Rear of Coach
                    </div>
@@ -388,19 +426,18 @@ export function BookingPage() {
                   <ShieldCheck className="w-5 h-5 text-emerald-600" /> Secure Checkout
                 </CardTitle>
                 <CardDescription>
-                  Confirm passenger details and complete your reservation.
+                  Confirm passenger details and place a 10-minute reservation hold.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
                 <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start space-x-3 text-emerald-950 dark:text-emerald-200">
                   <Sparkles className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-semibold">Instant Ticket Confirmation</p>
-                    <p className="opacity-90 mt-0.5">Your seat reservation and digital boarding pass will be generated immediately upon confirmation.</p>
+                    <p className="font-semibold">Instant Anti-Concurrency Seat Hold</p>
+                    <p className="opacity-90 mt-0.5">Clicking proceed guarantees your selected seats are held exclusively for you for 10 minutes.</p>
                   </div>
                 </div>
                 
-                {/* Breakdown Card */}
                 <div className="border rounded-2xl p-6 bg-card space-y-4">
                   <div className="text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b pb-2">
                     Payment Breakdown
@@ -455,7 +492,7 @@ export function BookingPage() {
                   className="font-bold px-8"
                 >
                   {bookMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4 stroke-[3]" />}
-                  Pay ₹{selectedTotal} & Confirm
+                  Reserve Seats & Proceed to Pay
                 </Button>
               </CardFooter>
             </Card>
@@ -533,7 +570,6 @@ export function BookingPage() {
         </div>
       </div>
 
-      {/* Floating Bottom Action Bar for Mobile */}
       {step === "SEAT" && selectedSeats.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t p-3.5 px-6 shadow-2xl flex items-center justify-between sm:hidden animate-in slide-in-from-bottom">
           <div>

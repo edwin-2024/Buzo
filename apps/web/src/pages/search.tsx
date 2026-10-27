@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
+import { format } from "date-fns"
 import { 
   ChevronRight, 
   Bus, 
@@ -65,7 +66,7 @@ export function SearchPage() {
   const filteredTrips = trips?.filter((trip) => {
     // 1. Calendar date filter
     if (dateStr) {
-      const tripDate = new Date(trip.departureTime).toISOString().split('T')[0]
+      const tripDate = format(new Date(trip.departureTime), "yyyy-MM-dd")
       if (tripDate !== dateStr) return false
     }
 

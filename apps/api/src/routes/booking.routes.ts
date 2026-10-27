@@ -2,10 +2,11 @@ import { Router } from "express";
 
 import { bookingController } from "../controllers/booking.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
+import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
-router.get("/", bookingController.getAll);
+router.get("/", authMiddleware, requireRole("ADMIN"), bookingController.getAll);
 
 router.get(
     "/me",
@@ -16,7 +17,13 @@ router.get(
 router.get("/:id/receipt", authMiddleware, bookingController.getReceipt);
 router.post("/:id/receipt/email", authMiddleware, bookingController.emailReceipt);
 
-router.get("/:id", bookingController.getById);
+router.post(
+    "/cancel-pending",
+    authMiddleware,
+    bookingController.cancelPending
+);
+
+router.get("/:id", authMiddleware, bookingController.getById);
 
 router.post(
     "/",

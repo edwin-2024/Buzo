@@ -32,8 +32,31 @@ export function registerBusSocket(io: Server) {
             console.log(`${socket.id} left ${busId}`);
         });
 
+        socket.on("trip:join", (tripId: string) => {
+            if (typeof tripId === "string" && tripId.trim()) {
+                socket.join(`trip:${tripId}`);
+            }
+        });
+
+        socket.on("trip:leave", (tripId: string) => {
+            if (typeof tripId === "string" && tripId.trim()) {
+                socket.leave(`trip:${tripId}`);
+            }
+        });
+
         socket.on("busLocationUpdate", (data: any) => {
-            // Broadcast to everyone (or specific rooms if needed)
+            if (
+                !data ||
+                typeof data.busId !== "string" ||
+                typeof data.latitude !== "number" ||
+                typeof data.longitude !== "number" ||
+                isNaN(data.latitude) ||
+                isNaN(data.longitude)
+            ) {
+                return;
+            }
+
+            // Broadcast to global fleet radar and bus subscribers
             io.emit("bus-location-update", {
                 busId: data.busId,
                 location: {

@@ -39,7 +39,22 @@ export class BookingController {
         next: NextFunction
     ) => {
         try {
-            const booking = await bookingService.findById(req.params.id as string);
+            let booking;
+            try {
+                booking = await bookingService.findById(req.params.id as string);
+            } catch {
+                return res.status(404).json({ message: "Booking not found" });
+            }
+
+            if (!booking) {
+                return res.status(404).json({ message: "Booking not found" });
+            }
+
+            if (booking.passengerId !== req.user.userId && req.user.role !== "ADMIN") {
+                return res.status(403).json({
+                    message: "Forbidden: You do not have permission to view this booking",
+                });
+            }
 
             res.status(200).json(booking);
         } catch (error) {
@@ -66,12 +81,54 @@ export class BookingController {
         }
     };
 
+    cancelPending = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) => {
+        try {
+            const { tripId } = req.body;
+            if (!tripId || typeof tripId !== "string") {
+                return res.status(400).json({ message: "tripId is required" });
+            }
+
+            const releasedSeatIds = await bookingService.cancelPendingReservations(
+                req.user.userId,
+                tripId
+            );
+
+            res.status(200).json({
+                message: "Pending reservation cancelled successfully",
+                releasedSeatIds,
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
     delete = async (
         req: Request,
         res: Response,
         next: NextFunction
     ) => {
         try {
+            let booking;
+            try {
+                booking = await bookingService.findById(req.params.id as string);
+            } catch {
+                return res.status(404).json({ message: "Booking not found" });
+            }
+
+            if (!booking) {
+                return res.status(404).json({ message: "Booking not found" });
+            }
+
+            if (booking.passengerId !== req.user.userId && req.user.role !== "ADMIN") {
+                return res.status(403).json({
+                    message: "Forbidden: You do not have permission to delete this booking",
+                });
+            }
+
             await bookingService.delete(req.params.id as string);
 
             res.sendStatus(204);

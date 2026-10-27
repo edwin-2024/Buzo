@@ -79,6 +79,19 @@ export class TripController {
         try {
             const input = updateTripSchema.parse(req.body);
 
+            if (req.user?.role === "DRIVER") {
+                const trip = await tripService.findById(req.params.id as string);
+                if (!trip) {
+                    return res.status(404).json({ message: "Trip not found" });
+                }
+                const driver = await tripService.findDriverByUserId(req.user.userId);
+                if (!driver || driver.assignedBusId !== trip.busId) {
+                    return res.status(403).json({
+                        message: "Forbidden: You can only update trips assigned to your bus",
+                    });
+                }
+            }
+
             const trip = await tripService.update(
                 req.params.id as string,
                 input

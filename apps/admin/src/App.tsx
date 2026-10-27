@@ -15,8 +15,9 @@ import { LiveMapPage } from '@/pages/live-map'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const user = useAuthStore((state) => state.user)
   
-  if (!isAuthenticated) {
+  if (!isAuthenticated || user?.role !== 'ADMIN') {
     return <Navigate to="/login" replace />
   }
   

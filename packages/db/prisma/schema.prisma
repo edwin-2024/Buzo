@@ -145,6 +145,8 @@ model Seat {
   trip Trip @relation(fields: [tripId], references: [id])
 
   booking Booking?
+
+  @@unique([tripId, seatNumber])
 }
 
 model Booking {

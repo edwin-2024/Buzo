@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
-import { CreditCard, CheckCircle2, ShieldCheck, Bus, Armchair, AlertCircle, Loader2 } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { CreditCard, CheckCircle2, ShieldCheck, Bus, Armchair, AlertCircle, Loader2, Clock, XCircle, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -14,13 +14,17 @@ import { api } from "@/lib/axios"
 import { resolveSeatPricing } from "@/lib/seat-pricing"
 import { useAuthStore } from "@/stores/auth.store"
 
+const HOLD_DURATION_SECONDS = 10 * 60; // 10 minutes
+
 export function PaymentPage() {
   const [searchParams] = useSearchParams()
   const tripId = searchParams.get("tripId")
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useAuthStore()
   
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
   const [cardName, setCardName] = useState(user?.name || "")
   const [cardNumber, setCardNumber] = useState("4532 •••• •••• 8920")
   const [expiry, setExpiry] = useState("12/28")
@@ -34,6 +38,64 @@ export function PaymentPage() {
     },
     enabled: !!user
   })
+
+  // Filter pending bookings for this trip
+  const pendingTripBookings = myBookings?.filter(
+    (b: any) => b.tripId === tripId && b.paymentStatus === "PENDING"
+  ) || []
+
+  // Check if they already paid
+  const paidTripBookings = myBookings?.filter(
+    (b: any) => b.tripId === tripId && b.paymentStatus === "PAID"
+  ) || []
+
+  // Calculate live reservation expiry countdown
+  const firstBooking = pendingTripBookings[0]
+  const createdAtMs = firstBooking?.createdAt ? new Date(firstBooking.createdAt).getTime() : Date.now()
+  const expiresAtMs = createdAtMs + HOLD_DURATION_SECONDS * 1000
+
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(() => {
+    return Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000))
+  })
+
+  useEffect(() => {
+    if (!firstBooking) return
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000))
+      setTimeLeftSeconds(remaining)
+      if (remaining <= 0) {
+        queryClient.invalidateQueries({ queryKey: ["my-bookings"] })
+        queryClient.invalidateQueries({ queryKey: ["seats", tripId] })
+      }
+    }
+
+    updateTimer()
+    const interval = setInterval(updateTimer, 1000)
+    return () => clearInterval(interval)
+  }, [firstBooking, expiresAtMs, tripId, queryClient])
+
+  const isExpired = firstBooking ? timeLeftSeconds <= 0 : false
+  const minutes = Math.floor(timeLeftSeconds / 60)
+  const seconds = timeLeftSeconds % 60
+  const formattedCountdown = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+  const percentRemaining = Math.max(0, Math.min(100, Math.round((timeLeftSeconds / HOLD_DURATION_SECONDS) * 100)))
+
+  const handleCancelReservation = async () => {
+    if (!tripId) return
+    setIsCancelling(true)
+    try {
+      await api.post("/bookings/cancel-pending", { tripId })
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] })
+      queryClient.invalidateQueries({ queryKey: ["seats", tripId] })
+      toast.success("Reservation cancelled. Seats released.")
+      navigate(`/booking/${tripId}`)
+    } catch (err) {
+      toast.error("Failed to cancel reservation")
+    } finally {
+      setIsCancelling(false)
+    }
+  }
 
   if (!tripId) {
     return (
@@ -53,16 +115,6 @@ export function PaymentPage() {
       </div>
     )
   }
-
-  // Filter pending bookings for this trip
-  const pendingTripBookings = myBookings?.filter(
-    (b: any) => b.tripId === tripId && b.paymentStatus === "PENDING"
-  ) || []
-
-  // Check if they already paid
-  const paidTripBookings = myBookings?.filter(
-    (b: any) => b.tripId === tripId && b.paymentStatus === "PAID"
-  ) || []
 
   if (pendingTripBookings.length === 0 && paidTripBookings.length > 0) {
     return (
@@ -97,7 +149,6 @@ export function PaymentPage() {
     }
   })
 
-  // Fallback to single seat estimate if accessed without pending bookings
   const totalAmount = bookingBreakdown.length > 0
     ? bookingBreakdown.reduce((sum: number, item: any) => sum + item.price, 0)
     : 599
@@ -107,21 +158,33 @@ export function PaymentPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isExpired) {
+      toast.error("Your reservation hold has expired. Please select your seats again.")
+      navigate(`/booking/${tripId}`)
+      return
+    }
+
     setIsProcessing(true)
 
     try {
-      // Simulate network delay for realistic feel
-      await new Promise(resolve => setTimeout(resolve, 1200))
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
       const { data } = await api.post("/payments/create-checkout-session", { tripId })
       
       if (data.success) {
+        queryClient.invalidateQueries({ queryKey: ["my-bookings"] })
+        queryClient.invalidateQueries({ queryKey: ["seats", tripId] })
         toast.success("Payment successful! Your seats are confirmed.")
         navigate(data.url || "/my-bookings")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Payment failed", error)
-      toast.error("Payment failed. Please try again.")
+      const msg = error.response?.data?.message || "Payment authorization failed. Please try again."
+      toast.error(msg)
+      if (msg.toLowerCase().includes("expired")) {
+        queryClient.invalidateQueries({ queryKey: ["seats", tripId] })
+        navigate(`/booking/${tripId}`)
+      }
       setIsProcessing(false)
     }
   }
@@ -135,13 +198,51 @@ export function PaymentPage() {
           </div>
           <CardTitle className="text-2xl font-extrabold tracking-tight">Complete Payment</CardTitle>
           <CardDescription className="text-xs">
-            Review your reservation details and complete checkout.
+            Review your reservation details and complete checkout before the hold expires.
           </CardDescription>
+
+          {/* Real-time Hold Expiry Countdown HUD */}
+          {firstBooking && (
+            <div className="pt-3">
+              {isExpired ? (
+                <div className="p-3 rounded-2xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold flex items-center justify-center gap-2">
+                  <XCircle className="w-4 h-4 shrink-0" />
+                  <span>Reservation Expired: Your 10-minute hold has ended and seats are released.</span>
+                </div>
+              ) : (
+                <div className={`p-3 rounded-2xl border transition-all ${
+                  timeLeftSeconds < 120 
+                    ? 'bg-red-500/10 border-red-500/30 text-red-500' 
+                    : 'bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 animate-pulse" /> Seat Hold Active
+                    </span>
+                    <span className="font-mono text-sm tracking-wider font-extrabold">
+                      {formattedCountdown}
+                    </span>
+                  </div>
+                  <div className="w-full bg-background/60 rounded-full h-1.5 overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${
+                        timeLeftSeconds < 120 ? 'bg-red-500' : 'bg-amber-500'
+                      }`}
+                      style={{ width: `${percentRemaining}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1 text-left">
+                    Seats are locked exclusively for your session. Complete payment within {minutes}m {seconds}s.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </CardHeader>
+
         <CardContent className="pt-6 space-y-5">
           {/* Interactive Digital Card Visual */}
           <div className="relative w-full h-48 rounded-2xl p-5 text-white shadow-2xl overflow-hidden bg-gradient-to-tr from-slate-900 via-blue-950 to-indigo-900 border border-white/15 flex flex-col justify-between">
-            {/* Background geometric accents */}
             <div className="absolute -top-12 -right-12 w-36 h-36 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
             <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
             
@@ -163,19 +264,16 @@ export function PaymentPage() {
               </div>
             </div>
 
-            {/* Chip & contactless */}
             <div className="flex items-center gap-3 z-10 my-1">
               <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 border border-amber-300/60 shadow-xs flex items-center justify-center">
                 <div className="w-6 h-4 border border-amber-800/40 rounded-xs"></div>
               </div>
             </div>
 
-            {/* Card Number */}
             <div className="z-10 font-mono text-lg tracking-widest text-slate-100 font-bold truncate">
               {cardNumber || "•••• •••• •••• ••••"}
             </div>
 
-            {/* Name and Expiry */}
             <div className="flex justify-between items-end z-10 text-xs">
               <div>
                 <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-semibold">Cardholder</span>
@@ -190,7 +288,6 @@ export function PaymentPage() {
             </div>
           </div>
 
-          {/* Quick Demo Fill Helper */}
           <div className="flex justify-end">
             <button
               type="button"
@@ -207,7 +304,6 @@ export function PaymentPage() {
             </button>
           </div>
 
-          {/* Trip & Seat Summary */}
           <div className="bg-secondary/40 rounded-2xl p-4 border border-border/70 space-y-3">
             <div className="flex justify-between items-start">
               <div>
@@ -221,7 +317,6 @@ export function PaymentPage() {
               </Badge>
             </div>
 
-            {/* Selected Seats Breakdown */}
             {bookingBreakdown.length > 0 && (
               <div className="pt-2 border-t border-border/50 space-y-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -253,86 +348,121 @@ export function PaymentPage() {
             </div>
           </div>
 
-          <form id="payment-form" onSubmit={handlePayment} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Cardholder Name
-              </Label>
-              <Input 
-                id="name" 
-                value={cardName} 
-                onChange={(e) => setCardName(e.target.value)} 
-                placeholder="John Doe" 
-                className="h-11 rounded-xl bg-background/80"
-                required 
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="card" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Card Number
-              </Label>
-              <Input 
-                id="card" 
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
-                placeholder="4532 •••• •••• 8920" 
-                maxLength={19} 
-                className="h-11 rounded-xl font-mono bg-background/80"
-                required 
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          {!isExpired ? (
+            <form id="payment-form" onSubmit={handlePayment} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="expiry" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Expiry Date
+                <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Cardholder Name
                 </Label>
                 <Input 
-                  id="expiry" 
-                  value={expiry}
-                  onChange={(e) => setExpiry(e.target.value)}
-                  placeholder="MM/YY" 
-                  maxLength={5} 
-                  className="h-11 rounded-xl font-mono bg-background/80"
+                  id="name" 
+                  value={cardName} 
+                  onChange={(e) => setCardName(e.target.value)} 
+                  placeholder="John Doe" 
+                  className="h-11 rounded-xl bg-background/80"
                   required 
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="cvv" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  CVV / CVC
+                <Label htmlFor="card" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Card Number
                 </Label>
                 <Input 
-                  id="cvv" 
-                  type="password" 
-                  value={cvv}
-                  onChange={(e) => setCvv(e.target.value)}
-                  placeholder="•••" 
-                  maxLength={4} 
+                  id="card" 
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  placeholder="4532 •••• •••• 8920" 
+                  maxLength={19} 
                   className="h-11 rounded-xl font-mono bg-background/80"
                   required 
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="expiry" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Expiry Date
+                  </Label>
+                  <Input 
+                    id="expiry" 
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                    placeholder="MM/YY" 
+                    maxLength={5} 
+                    className="h-11 rounded-xl font-mono bg-background/80"
+                    required 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cvv" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    CVV / CVC
+                  </Label>
+                  <Input 
+                    id="cvv" 
+                    type="password" 
+                    value={cvv}
+                    onChange={(e) => setCvv(e.target.value)}
+                    placeholder="•••" 
+                    maxLength={4} 
+                    className="h-11 rounded-xl font-mono bg-background/80"
+                    required 
+                  />
+                </div>
+              </div>
+            </form>
+          ) : (
+            <div className="text-center py-6 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Your reservation has expired. You can release any lingering hold and select new seats.
+              </p>
+              <Button onClick={() => navigate(`/booking/${tripId}`)} className="rounded-xl w-full">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Select New Seats
+              </Button>
             </div>
-          </form>
+          )}
         </CardContent>
+
         <CardFooter className="flex flex-col space-y-3 border-t border-border/60 bg-muted/10 p-6">
-          <Button 
-            form="payment-form" 
-            type="submit" 
-            className="w-full h-12 text-sm font-bold rounded-xl shadow-lg shadow-primary/25 gap-2" 
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Authorizing Payment...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="h-4 w-4" /> Pay ₹{totalAmount} & Confirm Reservation
-              </>
-            )}
-          </Button>
+          {!isExpired ? (
+            <>
+              <Button 
+                form="payment-form" 
+                type="submit" 
+                className="w-full h-12 text-sm font-bold rounded-xl shadow-lg shadow-primary/25 gap-2" 
+                disabled={isProcessing || isCancelling}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Authorizing Payment...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" /> Pay ₹{totalAmount} & Confirm Reservation
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelReservation}
+                disabled={isCancelling || isProcessing}
+                className="text-xs text-muted-foreground hover:text-destructive w-full"
+              >
+                {isCancelling ? "Cancelling..." : "Cancel & Release Reserved Seats"}
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(`/booking/${tripId}`)}
+              className="w-full h-11 rounded-xl"
+            >
+              Back to Seat Selection
+            </Button>
+          )}
           <p className="text-[11px] text-center text-muted-foreground">
-            Test payment gateway active. Click confirm to instantly issue your ticket and receipt.
+            10-minute anti-concurrency hold active. Once paid, your seat is permanently guaranteed.
           </p>
         </CardFooter>
       </Card>

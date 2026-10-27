@@ -6,8 +6,8 @@ import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
-router.get("/", driverController.getAll);
-router.get("/:id", driverController.getById);
+router.get("/", authMiddleware, requireRole("ADMIN"), driverController.getAll);
+router.get("/:id", authMiddleware, requireRole("ADMIN"), driverController.getById);
 
 router.post("/", authMiddleware, requireRole("ADMIN"), driverController.create);
 

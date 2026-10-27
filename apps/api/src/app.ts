@@ -12,6 +12,7 @@ import seatRoutes from "./routes/seat.routes";
 import busLocationRoutes from "./routes/bus-location.routes";
 import chatRoutes from "./routes/chat.routes";
 import paymentRoutes from "./routes/payment.routes";
+import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
 
@@ -35,5 +36,8 @@ app.use("/api", seatRoutes);
 app.use("/api/buses", busLocationRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/payments", paymentRoutes);
+
+// Global centralized error handling middleware
+app.use(errorHandler);
 
 export default app;

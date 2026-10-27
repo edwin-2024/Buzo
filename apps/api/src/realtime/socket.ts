@@ -22,3 +22,14 @@ export function getIO() {
 
     return io;
 }
+
+export function broadcastSeatUpdate(tripId: string, seatIds: string[], status: string) {
+    try {
+        if (!io) return;
+        const payload = { tripId, seatIds, status, timestamp: new Date().toISOString() };
+        io.to(`trip:${tripId}`).emit("seats:updated", payload);
+        io.emit("seats:updated", payload);
+    } catch {
+        // Socket.IO not initialized (e.g. during standalone test execution)
+    }
+}
