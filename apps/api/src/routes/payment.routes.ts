@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { prisma } from "@buzo/db";
 import { authMiddleware } from "../middleware/auth.middleware";
+import { bookingService } from "../services/booking.service";
 
 const router = Router();
 
-router.post("/create-checkout-session", authMiddleware, async (req, res) => {
+router.post("/create-checkout-session", authMiddleware, async (req, res, next) => {
     try {
         const { tripId } = req.body;
         const passengerId = req.user?.userId;
@@ -13,30 +13,18 @@ router.post("/create-checkout-session", authMiddleware, async (req, res) => {
             return res.status(400).json({ error: "Missing tripId or authentication" });
         }
 
-        // Mock Stripe checkout session creation
-        // We will just instantly update all pending bookings for this trip/user to PAID
-        
-        await prisma.booking.updateMany({
-            where: {
-                tripId: tripId,
-                passengerId: passengerId,
-                paymentStatus: "PENDING",
-            },
-            data: {
-                paymentStatus: "PAID",
-            },
-        });
+        // Validate hold window and atomically confirm reservation
+        const result = await bookingService.confirmPayment(passengerId, tripId);
 
-        // Normally we would return a stripe checkout URL here
-        // For MVP, return a mock success URL that frontend will redirect to
         return res.json({ 
             url: "/my-bookings",
-            success: true 
+            success: true,
+            seatIds: result.seatIds,
+            message: "Payment confirmed successfully",
         });
         
     } catch (error) {
-        console.error("Payment error:", error);
-        return res.status(500).json({ error: "Failed to create checkout session" });
+        next(error);
     }
 });
 

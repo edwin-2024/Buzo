@@ -149,6 +149,11 @@ export function DashboardPage() {
     // Calculate total steps for current segment
     let currentSegmentSteps = 0;
     
+    if (simulationRef.current) {
+      clearInterval(simulationRef.current);
+      simulationRef.current = null;
+    }
+
     simulationRef.current = setInterval(() => {
       if (isOnBreakRef.current) {
         return;
@@ -215,7 +220,10 @@ export function DashboardPage() {
   }
 
   const stopSimulation = (trip: any) => {
-    if (simulationRef.current) clearInterval(simulationRef.current)
+    if (simulationRef.current) {
+      clearInterval(simulationRef.current);
+      simulationRef.current = null;
+    }
     if (isOnBreakRef.current && socketRef.current && trip) {
       socketRef.current.emit("bus:break", {
         busId: trip.busId,

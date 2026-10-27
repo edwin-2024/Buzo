@@ -13,7 +13,9 @@ import {
   X, 
   ArrowRight, 
   Bus, 
-  ShieldCheck 
+  ShieldCheck,
+  Clock,
+  AlertCircle
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -97,7 +99,7 @@ export function MyBookingsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "PENDING": return "bg-yellow-500/10 text-yellow-500 border-yellow-200"
+      case "PENDING": return "bg-amber-500/10 text-amber-600 border-amber-300"
       case "PAID": return "bg-green-500/10 text-green-500 border-green-200"
       case "FAILED": return "bg-destructive/10 text-destructive border-destructive/20"
       case "REFUNDED": return "bg-muted text-muted-foreground"
@@ -117,6 +119,12 @@ export function MyBookingsPage() {
     const isEligibleForReceipt =
       booking.paymentStatus === "PAID" || booking.trip?.status === "COMPLETED"
     const seatPricing = resolveSeatPricing(booking.seat, booking.seat?.seatNumber || 1)
+    const isPending = booking.paymentStatus === "PENDING"
+    const bookingAgeMs = Date.now() - new Date(booking.createdAt).getTime()
+    const isHoldExpired = isPending && bookingAgeMs > 10 * 60 * 1000
+    const remainingHoldMinutes = isPending && !isHoldExpired 
+      ? Math.max(1, Math.ceil((10 * 60 * 1000 - bookingAgeMs) / 60000))
+      : 0
 
     return (
       <Card key={booking.id} className="overflow-hidden transition-all hover:shadow-md border-border/50">
@@ -139,9 +147,19 @@ export function MyBookingsPage() {
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-xl font-bold">{booking.trip.route?.name}</h3>
                 <div className="flex flex-col items-end gap-1">
-                  <Badge variant="outline" className={getStatusColor(booking.paymentStatus)}>
-                    {booking.paymentStatus}
-                  </Badge>
+                  {isHoldExpired ? (
+                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> EXPIRED (UNPAID)
+                    </Badge>
+                  ) : isPending ? (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-300 font-semibold flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> HELD ({remainingHoldMinutes}m left)
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className={getStatusColor(booking.paymentStatus)}>
+                      {booking.paymentStatus}
+                    </Badge>
+                  )}
                   {booking.trip.status === "COMPLETED" && (
                     <Badge variant="secondary" className="bg-muted text-muted-foreground text-[10px]">
                       COMPLETED
@@ -179,14 +197,22 @@ export function MyBookingsPage() {
               </div>
               
               <div className="flex flex-wrap gap-2">
-                {booking.paymentStatus === "PENDING" && (
+                {isHoldExpired ? (
                   <Button 
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    variant="outline"
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold"
+                    onClick={() => navigate(`/booking/${booking.tripId}`)}
+                  >
+                    Hold Expired — Rebook
+                  </Button>
+                ) : isPending ? (
+                  <Button 
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs"
                     onClick={() => navigate(`/payment?tripId=${booking.tripId}`)}
                   >
                     Pay Now
                   </Button>
-                )}
+                ) : null}
 
                 {isEligibleForReceipt && (
                   <>

@@ -4,6 +4,7 @@ import { bookingRepository } from "../repositories/booking.repository";
 import { seatRepository } from "../repositories/seat.repository";
 import { tripRepository } from "../repositories/trip.repository";
 import { userRepository } from "../repositories/user.repository";
+import { broadcastSeatUpdate } from "../realtime/socket";
 
 import type { CreateBookingInput } from "../validation/booking.schema";
 
@@ -30,6 +31,9 @@ export class BookingService {
         passengerId: string,
         input: CreateBookingInput
     ) {
+        // Step 1: Eagerly sweep any expired reservations on this trip
+        await this.cleanupExpiredReservations(input.tripId);
+
         const passenger =
             await userRepository.findById(passengerId);
 
@@ -53,13 +57,10 @@ export class BookingService {
             if (seat.tripId !== input.tripId) {
                 throw new Error(`Seat ${seatId} does not belong to this trip`);
             }
-            if (seat.status !== SeatStatus.AVAILABLE) {
-                throw new Error(`Seat ${seatId} already booked`);
-            }
             seats.push(seat);
         }
 
-        return bookingRepository.createBooking(
+        const bookings = await bookingRepository.createBooking(
             {
                 passenger: {
                     connect: {
@@ -75,6 +76,50 @@ export class BookingService {
             },
             input.seatIds
         );
+
+        // Notify all clients on this trip about the newly reserved seats
+        broadcastSeatUpdate(input.tripId, input.seatIds, SeatStatus.RESERVED);
+
+        return bookings;
+    }
+
+    async confirmPayment(passengerId: string, tripId: string) {
+        const result = await bookingRepository.confirmPayment(passengerId, tripId);
+
+        // Notify all clients that these seats are now confirmed booked
+        broadcastSeatUpdate(tripId, result.seatIds, SeatStatus.BOOKED);
+
+        return result;
+    }
+
+    async cleanupExpiredReservations(tripId?: string) {
+        const result = await bookingRepository.cleanupExpiredReservations(tripId);
+
+        if (result.releasedCount > 0) {
+            console.log(`🧹 Reclaimed ${result.releasedCount} expired seat reservations.`);
+            const tripSeatMap = (result as any).tripSeatMap as [string, string[]][] | undefined;
+            if (tripSeatMap && tripSeatMap.length > 0) {
+                for (const [tId, tSeatIds] of tripSeatMap) {
+                    broadcastSeatUpdate(tId, tSeatIds, SeatStatus.AVAILABLE);
+                }
+            } else {
+                for (const tId of result.tripIds) {
+                    broadcastSeatUpdate(tId, result.seatIds, SeatStatus.AVAILABLE);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    async cancelPendingReservations(passengerId: string, tripId: string) {
+        const seatIds = await bookingRepository.cancelPendingReservations(passengerId, tripId);
+
+        if (seatIds.length > 0) {
+            broadcastSeatUpdate(tripId, seatIds, SeatStatus.AVAILABLE);
+        }
+
+        return seatIds;
     }
 
     async delete(id: string) {
@@ -84,11 +129,12 @@ export class BookingService {
             await tx.booking.delete({ where: { id } });
             await tx.seat.update({
                 where: { id: booking.seatId },
-                data: { status: "AVAILABLE" },
+                data: { status: SeatStatus.AVAILABLE },
             });
         });
-    }
 
+        broadcastSeatUpdate(booking.tripId, [booking.seatId], SeatStatus.AVAILABLE);
+    }
 }
 
 export const bookingService =

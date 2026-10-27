@@ -1,10 +1,19 @@
 import { prisma, Prisma } from "@buzo/db";
 
+const safeUserSelect = {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    createdAt: true,
+    updatedAt: true,
+};
+
 export class DriverRepository {
     async findAll() {
         return prisma.driver.findMany({
             include: {
-                user: true,
+                user: { select: safeUserSelect },
                 assignedBus: true,
             },
         });
@@ -14,7 +23,7 @@ export class DriverRepository {
         return prisma.driver.findUnique({
             where: { id },
             include: {
-                user: true,
+                user: { select: safeUserSelect },
                 assignedBus: true,
             },
         });
@@ -38,7 +47,7 @@ export class DriverRepository {
         return prisma.driver.create({
             data,
             include: {
-                user: true,
+                user: { select: safeUserSelect },
                 assignedBus: true,
             },
         });
@@ -55,7 +64,7 @@ export class DriverRepository {
                 },
             },
             include: {
-                user: true,
+                user: { select: safeUserSelect },
                 assignedBus: true,
             },
         });
