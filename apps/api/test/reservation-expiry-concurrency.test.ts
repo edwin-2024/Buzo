@@ -87,6 +87,7 @@ describe("Reservation Hold, Expiry & Concurrency Suite", () => {
                 releasedCount: 0,
                 seatIds: [],
                 tripIds: [],
+                tripSeatMap: [],
             });
             const userSpy = spyOn(userRepository, "findById").mockResolvedValue(mockUser as any);
             const tripSpy = spyOn(tripRepository, "findById").mockResolvedValue(mockTrip as any);
@@ -121,6 +122,7 @@ describe("Reservation Hold, Expiry & Concurrency Suite", () => {
                 releasedCount: 0,
                 seatIds: [],
                 tripIds: [],
+                tripSeatMap: [],
             });
             const userSpy = spyOn(userRepository, "findById").mockResolvedValue(mockUser as any);
             const tripSpy = spyOn(tripRepository, "findById").mockResolvedValue(mockTrip as any);
@@ -201,6 +203,7 @@ describe("Reservation Hold, Expiry & Concurrency Suite", () => {
                 releasedCount: 1,
                 seatIds: ["seat-5"],
                 tripIds: ["trip-1"],
+                tripSeatMap: [["trip-1", ["seat-5"]]],
             });
             const broadcastSpy = spyOn(socketModule, "broadcastSeatUpdate").mockImplementation(() => {});
 
