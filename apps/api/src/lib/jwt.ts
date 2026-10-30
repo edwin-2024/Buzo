@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 import crypto from "node:crypto";
 
 import { env } from "@buzo/env";
@@ -11,12 +11,12 @@ export interface JwtPayload {
     exp?: number;
 }
 
-const EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1d";
+const EXPIRES_IN: NonNullable<SignOptions["expiresIn"]> = (process.env.JWT_EXPIRES_IN as NonNullable<SignOptions["expiresIn"]>) || "1d";
 
 export function signToken(payload: JwtPayload): string {
     const jti = payload.jti || crypto.randomUUID();
     return jwt.sign({ ...payload, jti }, env.JWT_SECRET, {
-        expiresIn: EXPIRES_IN as any,
+        expiresIn: EXPIRES_IN,
     });
 }
 

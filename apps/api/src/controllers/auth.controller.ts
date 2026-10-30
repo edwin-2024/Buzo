@@ -46,8 +46,7 @@ export class AuthController {
         next: NextFunction
     ) => {
         try {
-            const authHeader = req.headers.authorization;
-            const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
+            const token = req.token;
             if (token) {
                 tokenRevocationService.revokeToken(token, req.user);
             }

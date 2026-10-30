@@ -14,13 +14,11 @@ import busLocationRoutes from "./routes/bus-location.routes";
 import chatRoutes from "./routes/chat.routes";
 import paymentRoutes from "./routes/payment.routes";
 import { errorHandler } from "./middleware/error.middleware";
-import {
-    authRateLimiter,
-    chatRateLimiter,
-    apiGeneralLimiter,
-} from "./middleware/rate-limit.middleware";
 
 const app = express();
+
+// Trust reverse proxy (e.g. Nginx, ALB, Cloudflare) for accurate client IP rate limiting
+app.set("trust proxy", 1);
 
 // 1. Security Headers with Helmet (cross-origin resource policy enabled for web assets & maps)
 app.use(
@@ -48,13 +46,7 @@ app.get("/", (_, res) => {
     });
 });
 
-// 4. Rate Limiting Middleware
-app.use("/api", apiGeneralLimiter);
-app.use("/api/auth/login", authRateLimiter);
-app.use("/api/auth/signup", authRateLimiter);
-app.use("/api/chat", chatRateLimiter);
-
-// 5. Route Controllers
+// 4. Route Controllers (route-scoped rate limiters co-located in auth and chat routes)
 app.use("/api/auth", authRoutes);
 app.use("/api/stops", stopRoutes);
 app.use("/api/routes", routeRoutes);
@@ -67,7 +59,7 @@ app.use("/api/buses", busLocationRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/payments", paymentRoutes);
 
-// 6. Global centralized error handling middleware
+// 5. Global centralized error handling middleware
 app.use(errorHandler);
 
 export default app;

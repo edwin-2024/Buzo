@@ -17,14 +17,14 @@ export async function authMiddleware(
             });
         }
 
-        if (!authHeader.startsWith("Bearer ")) {
+        const match = authHeader.match(/^Bearer\s+(.*)$/i);
+        if (!match || !match[1]) {
             return res.status(401).json({
-                message: "Invalid authorization header",
+                message: "Invalid authorization header format",
             });
         }
 
-        const token = authHeader.split(" ")[1];
-
+        const token = match[1].trim();
         if (!token) {
             return res.status(401).json({
                 message: "Invalid token",
@@ -40,6 +40,7 @@ export async function authMiddleware(
         }
 
         req.user = payload;
+        req.token = token;
 
         next();
     } catch {
@@ -57,12 +58,14 @@ export async function optionalAuthMiddleware(
     try {
         const authHeader = req.headers.authorization;
 
-        if (authHeader && authHeader.startsWith("Bearer ")) {
-            const token = authHeader.split(" ")[1];
-            if (token) {
+        if (authHeader) {
+            const match = authHeader.match(/^Bearer\s+(.*)$/i);
+            if (match && match[1]) {
+                const token = match[1].trim();
                 const payload = verifyToken(token);
                 if (!tokenRevocationService.isRevoked(token, payload)) {
                     req.user = payload;
+                    req.token = token;
                 }
             }
         }

@@ -368,6 +368,30 @@ describe("Security & Validation Integrity Suite", () => {
             expect(statusSent).toBe(401);
             expect(jsonSent.message).toContain("revoked or invalidated");
         });
+
+        it("should accept case-insensitive bearer header format", async () => {
+            const token = signToken({ userId: "u-case-1", role: "PASSENGER" });
+            const req: any = {
+                headers: { authorization: `bearer ${token}` },
+            };
+            const res: any = {
+                status: (c: number) => ({ json: (d: any) => ({ code: c, body: d }) }),
+            };
+            let nextCalled = false;
+
+            await authMiddleware(req, res, () => { nextCalled = true; });
+
+            expect(nextCalled).toBe(true);
+            expect(req.user.userId).toBe("u-case-1");
+            expect(req.token).toBe(token);
+        });
+
+        it("cleanupExpired should purge expired tokens and user revocations", () => {
+            // Seed expired entry
+            tokenRevocationService.revokeToken("expired-tok", { userId: "u1", exp: Math.floor(Date.now() / 1000) - 10 } as any);
+            const cleaned = tokenRevocationService.cleanupExpired();
+            expect(cleaned).toBeGreaterThanOrEqual(1);
+        });
     });
 
     describe("HTTP Security Headers & Health Probe", () => {

@@ -26,13 +26,14 @@ export const expirySweeperTimer = setInterval(async () => {
 }, RESERVATION_SWEEPER_INTERVAL_MS);
 
 // Periodic cleanup of expired entries from the token revocation store (every 10 minutes)
+export const TOKEN_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 export const tokenCleanupTimer = setInterval(() => {
     try {
         tokenRevocationService.cleanupExpired();
     } catch (err) {
         console.error("Token revocation cleanup error:", err);
     }
-}, 10 * 60 * 1000);
+}, TOKEN_CLEANUP_INTERVAL_MS);
 
 server.listen(env.PORT, () => {
     console.log(`🚀 Server running on ${env.PORT}`);

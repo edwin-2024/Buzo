@@ -1,33 +1,70 @@
 import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
 import type { JwtPayload } from "../lib/jwt";
 
+export const DEFAULT_REVOCATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface UserRevocationEntry {
+    revokedAtSec: number;
+    expiresAtMs: number;
+}
+
 class TokenRevocationService {
-    // Map of tokenHash -> expiresAtMs
+    // Map of token identifier (jti or SHA-256 hash) -> expiresAtMs
     private revokedTokens = new Map<string, number>();
 
-    // Map of userId -> timestampMs (all tokens issued before this are invalid)
-    private userRevocations = new Map<string, number>();
+    // Map of userId -> UserRevocationEntry (cleared after 24h)
+    private userRevocations = new Map<string, UserRevocationEntry>();
 
     private hashToken(token: string): string {
         return crypto.createHash("sha256").update(token).digest("hex");
     }
 
+    private resolveTokenKey(token: string, payload?: JwtPayload): string {
+        if (payload?.jti) {
+            return payload.jti;
+        }
+        try {
+            const decoded = jwt.decode(token) as JwtPayload | null;
+            if (decoded?.jti) {
+                return decoded.jti;
+            }
+        } catch {
+            // Non-JWT token string
+        }
+        return this.hashToken(token);
+    }
+
     /**
      * Revoke an individual token (e.g. on user logout).
-     * The token is stored until its natural expiration timestamp.
+     * Stored until its natural expiration timestamp, then swept.
      */
     revokeToken(token: string, payload?: JwtPayload): void {
-        const tokenHash = this.hashToken(token);
-        // Expiration defaults to 24h from now if not present in payload
-        const expiresAtMs = payload?.exp ? payload.exp * 1000 : Date.now() + 24 * 60 * 60 * 1000;
-        this.revokedTokens.set(tokenHash, expiresAtMs);
+        const key = this.resolveTokenKey(token, payload);
+        let expiresAtMs: number;
+        if (payload?.exp) {
+            expiresAtMs = payload.exp * 1000;
+        } else {
+            try {
+                const decoded = jwt.decode(token) as JwtPayload | null;
+                expiresAtMs = decoded?.exp ? decoded.exp * 1000 : Date.now() + DEFAULT_REVOCATION_TTL_MS;
+            } catch {
+                expiresAtMs = Date.now() + DEFAULT_REVOCATION_TTL_MS;
+            }
+        }
+        this.revokedTokens.set(key, expiresAtMs);
     }
 
     /**
      * Revoke all active tokens for a specific user (e.g. on demotion, password reset, or account lock).
+     * Any token issued on or before this timestamp is invalidated.
      */
     revokeAllUserTokens(userId: string): void {
-        this.userRevocations.set(userId, Date.now());
+        const nowMs = Date.now();
+        this.userRevocations.set(userId, {
+            revokedAtSec: Math.floor(nowMs / 1000),
+            expiresAtMs: nowMs + DEFAULT_REVOCATION_TTL_MS,
+        });
     }
 
     /**
@@ -35,21 +72,20 @@ class TokenRevocationService {
      */
     isRevoked(token: string, payload: JwtPayload): boolean {
         // 1. Check user-wide revocation timestamp
-        const userRevokedAt = this.userRevocations.get(payload.userId);
-        if (userRevokedAt && payload.iat) {
-            const tokenIssuedAtMs = payload.iat * 1000;
-            if (tokenIssuedAtMs <= userRevokedAt) {
+        const userEntry = this.userRevocations.get(payload.userId);
+        if (userEntry && payload.iat) {
+            // If token was issued on or before the revocation second, consider revoked
+            if (payload.iat <= userEntry.revokedAtSec) {
                 return true;
             }
         }
 
-        // 2. Check individual token blacklist
-        const tokenHash = this.hashToken(token);
-        const expiresAtMs = this.revokedTokens.get(tokenHash);
+        // 2. Check individual token identifier (jti preferred, or hash)
+        const key = this.resolveTokenKey(token, payload);
+        const expiresAtMs = this.revokedTokens.get(key);
         if (expiresAtMs) {
             if (Date.now() > expiresAtMs) {
-                // Expired entry, delete lazily
-                this.revokedTokens.delete(tokenHash);
+                this.revokedTokens.delete(key);
                 return false;
             }
             return true;
@@ -64,12 +100,21 @@ class TokenRevocationService {
     cleanupExpired(): number {
         const now = Date.now();
         let cleaned = 0;
-        for (const [hash, expMs] of this.revokedTokens.entries()) {
+
+        for (const [key, expMs] of this.revokedTokens.entries()) {
             if (now > expMs) {
-                this.revokedTokens.delete(hash);
+                this.revokedTokens.delete(key);
                 cleaned++;
             }
         }
+
+        for (const [userId, entry] of this.userRevocations.entries()) {
+            if (now > entry.expiresAtMs) {
+                this.userRevocations.delete(userId);
+                cleaned++;
+            }
+        }
+
         return cleaned;
     }
 
