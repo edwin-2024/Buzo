@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 
 import { verifyToken } from "../lib/jwt";
+import { tokenRevocationService } from "../services/token-revocation.service";
 
 export async function authMiddleware(
     req: Request,
@@ -32,6 +33,12 @@ export async function authMiddleware(
 
         const payload = verifyToken(token);
 
+        if (tokenRevocationService.isRevoked(token, payload)) {
+            return res.status(401).json({
+                message: "Token has been revoked or invalidated. Please log in again.",
+            });
+        }
+
         req.user = payload;
 
         next();
@@ -44,7 +51,7 @@ export async function authMiddleware(
 
 export async function optionalAuthMiddleware(
     req: Request,
-    res: Response,
+    _res: Response,
     next: NextFunction
 ) {
     try {
@@ -54,7 +61,9 @@ export async function optionalAuthMiddleware(
             const token = authHeader.split(" ")[1];
             if (token) {
                 const payload = verifyToken(token);
-                req.user = payload;
+                if (!tokenRevocationService.isRevoked(token, payload)) {
+                    req.user = payload;
+                }
             }
         }
     } catch {

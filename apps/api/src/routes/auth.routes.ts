@@ -9,6 +9,12 @@ router.post("/signup", authController.signUp);
 
 router.post("/login", authController.login);
 
+router.post(
+    "/logout",
+    authMiddleware,
+    authController.logout
+);
+
 router.get(
     "/me",
     authMiddleware,

@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
 import authRoutes from "./routes/auth.routes";
 import stopRoutes from "./routes/stop.routes";
@@ -13,11 +14,33 @@ import busLocationRoutes from "./routes/bus-location.routes";
 import chatRoutes from "./routes/chat.routes";
 import paymentRoutes from "./routes/payment.routes";
 import { errorHandler } from "./middleware/error.middleware";
+import {
+    authRateLimiter,
+    chatRateLimiter,
+    apiGeneralLimiter,
+} from "./middleware/rate-limit.middleware";
 
 const app = express();
 
+// 1. Security Headers with Helmet (cross-origin resource policy enabled for web assets & maps)
+app.use(
+    helmet({
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+);
+
+// 2. Cross-Origin Resource Sharing & Parsers
 app.use(cors());
 app.use(express.json());
+
+// 3. Health & Readiness probes
+app.get("/health", (_, res) => {
+    res.status(200).json({
+        status: "ok",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+    });
+});
 
 app.get("/", (_, res) => {
     res.json({
@@ -25,6 +48,13 @@ app.get("/", (_, res) => {
     });
 });
 
+// 4. Rate Limiting Middleware
+app.use("/api", apiGeneralLimiter);
+app.use("/api/auth/login", authRateLimiter);
+app.use("/api/auth/signup", authRateLimiter);
+app.use("/api/chat", chatRateLimiter);
+
+// 5. Route Controllers
 app.use("/api/auth", authRoutes);
 app.use("/api/stops", stopRoutes);
 app.use("/api/routes", routeRoutes);
@@ -37,7 +67,7 @@ app.use("/api/buses", busLocationRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/payments", paymentRoutes);
 
-// Global centralized error handling middleware
+// 6. Global centralized error handling middleware
 app.use(errorHandler);
 
 export default app;
