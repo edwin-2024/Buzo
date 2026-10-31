@@ -4,6 +4,7 @@ import app from "./app";
 import { env } from "@buzo/env";
 import { initializeSocket } from "./realtime/socket";
 import { bookingService } from "./services/booking.service";
+import { tokenRevocationService } from "./services/token-revocation.service";
 import { RESERVATION_SWEEPER_INTERVAL_MS } from "./config/reservation.config";
 
 const server = http.createServer(app);
@@ -23,6 +24,16 @@ export const expirySweeperTimer = setInterval(async () => {
         isSweeping = false;
     }
 }, RESERVATION_SWEEPER_INTERVAL_MS);
+
+// Periodic cleanup of expired entries from the token revocation store (every 10 minutes)
+export const TOKEN_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+export const tokenCleanupTimer = setInterval(() => {
+    try {
+        tokenRevocationService.cleanupExpired();
+    } catch (err) {
+        console.error("Token revocation cleanup error:", err);
+    }
+}, TOKEN_CLEANUP_INTERVAL_MS);
 
 server.listen(env.PORT, () => {
     console.log(`🚀 Server running on ${env.PORT}`);

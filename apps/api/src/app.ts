@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
 import authRoutes from "./routes/auth.routes";
 import stopRoutes from "./routes/stop.routes";
@@ -16,8 +17,28 @@ import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
 
+// Trust reverse proxy (e.g. Nginx, ALB, Cloudflare) for accurate client IP rate limiting
+app.set("trust proxy", 1);
+
+// 1. Security Headers with Helmet (cross-origin resource policy enabled for web assets & maps)
+app.use(
+    helmet({
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+);
+
+// 2. Cross-Origin Resource Sharing & Parsers
 app.use(cors());
 app.use(express.json());
+
+// 3. Health & Readiness probes
+app.get("/health", (_, res) => {
+    res.status(200).json({
+        status: "ok",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+    });
+});
 
 app.get("/", (_, res) => {
     res.json({
@@ -25,6 +46,7 @@ app.get("/", (_, res) => {
     });
 });
 
+// 4. Route Controllers (route-scoped rate limiters co-located in auth and chat routes)
 app.use("/api/auth", authRoutes);
 app.use("/api/stops", stopRoutes);
 app.use("/api/routes", routeRoutes);
@@ -37,7 +59,7 @@ app.use("/api/buses", busLocationRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/payments", paymentRoutes);
 
-// Global centralized error handling middleware
+// 5. Global centralized error handling middleware
 app.use(errorHandler);
 
 export default app;

@@ -3,6 +3,7 @@ import { UserRole } from "@buzo/db";
 import { driverRepository } from "../repositories/driver.repository";
 import { userRepository } from "../repositories/user.repository";
 import { busRepository } from "../repositories/bus.repository";
+import { tokenRevocationService } from "./token-revocation.service";
 
 import type {
     AssignBusInput,
@@ -81,7 +82,10 @@ export class DriverService {
     }
 
     async delete(id: string) {
-        await this.findById(id);
+        const driver = await this.findById(id);
+
+        // Security: Revoke all tokens issued to this driver so demoted drivers cannot invoke privileged endpoints
+        tokenRevocationService.revokeAllUserTokens(driver.userId);
 
         return driverRepository.delete(id);
     }

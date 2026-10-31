@@ -45,6 +45,11 @@ export function registerBusSocket(io: Server) {
         });
 
         socket.on("busLocationUpdate", (data: any) => {
+            // Guard: Passengers cannot broadcast bus telemetry
+            if (socket.data?.user && socket.data.user.role === "PASSENGER") {
+                return;
+            }
+
             if (
                 !data ||
                 typeof data.busId !== "string" ||
@@ -67,6 +72,11 @@ export function registerBusSocket(io: Server) {
         });
 
         socket.on("bus:delay", (data: { busId: string; tripId?: string; delayMinutes: number; reason?: string }) => {
+            // Guard: Passengers cannot report delays
+            if (socket.data?.user && socket.data.user.role === "PASSENGER") {
+                return;
+            }
+
             if (!data || !data.busId || typeof data.delayMinutes !== "number" || data.delayMinutes < 0) {
                 return;
             }
@@ -82,6 +92,11 @@ export function registerBusSocket(io: Server) {
         });
 
         socket.on("bus:break", (data: { busId: string; tripId?: string; onBreak: boolean; reason?: string }) => {
+            // Guard: Passengers cannot trigger driver break status
+            if (socket.data?.user && socket.data.user.role === "PASSENGER") {
+                return;
+            }
+
             if (!data || !data.busId || typeof data.busId !== "string" || typeof data.onBreak !== "boolean") {
                 return;
             }

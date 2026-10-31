@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 
 import { verifyToken } from "../lib/jwt";
+import { tokenRevocationService } from "../services/token-revocation.service";
 
 export async function authMiddleware(
     req: Request,
@@ -16,14 +17,14 @@ export async function authMiddleware(
             });
         }
 
-        if (!authHeader.startsWith("Bearer ")) {
+        const match = authHeader.match(/^Bearer\s+(.*)$/i);
+        if (!match || !match[1]) {
             return res.status(401).json({
-                message: "Invalid authorization header",
+                message: "Invalid authorization header format",
             });
         }
 
-        const token = authHeader.split(" ")[1];
-
+        const token = match[1].trim();
         if (!token) {
             return res.status(401).json({
                 message: "Invalid token",
@@ -32,7 +33,14 @@ export async function authMiddleware(
 
         const payload = verifyToken(token);
 
+        if (tokenRevocationService.isRevoked(token, payload)) {
+            return res.status(401).json({
+                message: "Token has been revoked or invalidated. Please log in again.",
+            });
+        }
+
         req.user = payload;
+        req.token = token;
 
         next();
     } catch {
@@ -44,17 +52,21 @@ export async function authMiddleware(
 
 export async function optionalAuthMiddleware(
     req: Request,
-    res: Response,
+    _res: Response,
     next: NextFunction
 ) {
     try {
         const authHeader = req.headers.authorization;
 
-        if (authHeader && authHeader.startsWith("Bearer ")) {
-            const token = authHeader.split(" ")[1];
-            if (token) {
+        if (authHeader) {
+            const match = authHeader.match(/^Bearer\s+(.*)$/i);
+            if (match && match[1]) {
+                const token = match[1].trim();
                 const payload = verifyToken(token);
-                req.user = payload;
+                if (!tokenRevocationService.isRevoked(token, payload)) {
+                    req.user = payload;
+                    req.token = token;
+                }
             }
         }
     } catch {

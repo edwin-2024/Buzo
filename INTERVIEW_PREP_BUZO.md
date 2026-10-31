@@ -355,6 +355,11 @@ Buzo/
       }
       const token = authHeader.split(" ")[1];
       const payload = verifyToken(token);
+
+      if (tokenRevocationService.isRevoked(token, payload)) {
+        return res.status(401).json({ message: "Token has been revoked or invalidated. Please log in again." });
+      }
+
       req.user = payload;
       next();
     } catch {
@@ -703,6 +708,23 @@ Buzo/
 ---
 
 ### Security & API
+#### Q: How do you prevent unauthorized GPS coordinate spoofing from malicious users or wrong drivers?
+- **Honest Code Reality:** Enforced at both route and controller levels.
+  1. `PATCH /api/buses/:busId/location` requires role `DRIVER` or `ADMIN` via `requireRole("DRIVER", "ADMIN")`.
+  2. In `BusLocationController.update`, if the caller has role `DRIVER`, the controller checks `driverRepository.findByUserId` and verifies `driver.assignedBusId === req.params.busId`. If a driver attempts to spoof another driver's bus coordinates, the backend halts execution and returns `403 Forbidden`.
+
+#### Q: How do you handle JWT revocation and user logout if JWTs are stateless?
+- **Honest Code Reality:** Buzo implements a dual-layer in-memory `tokenRevocationService`.
+  1. When a user hits `POST /api/auth/logout`, their token is SHA-256 hashed and added to a revocation blacklist with TTL equal to the token's remaining lifespan.
+  2. For administrative demotions or credential resets, `revokeAllUserTokens(userId)` records a revocation timestamp, instantly invalidating all tokens issued to that user prior to that timestamp.
+  3. `authMiddleware` evaluates `tokenRevocationService.isRevoked(token, payload)` on every request.
+
+#### Q: How do you protect authentication and AI chat endpoints from brute force and DoS?
+- **Honest Code Reality:** Buzo configures `helmet` for HTTP security headers (HSTS, CSP, X-Frame-Options, CORP) and route-scoped `express-rate-limit` middleware:
+  - `/api/auth/login` & `/api/auth/signup`: limited to 10 attempts per 15 minutes per IP.
+  - `/api/chat`: limited to 30 requests per minute to prevent LLM API budget depletion.
+  - Global `/api`: 500 requests per 15 minutes.
+
 #### Q: How do you prevent a regular passenger from hitting Admin APIs using Postman?
 - **Honest Code Reality:** Fully enforced. All administrative routes (`/api/buses`, `/api/routes`, `/api/trips`, `/api/drivers`) chain `requireRole("ADMIN")` after `authMiddleware`.
 - **How to Answer Confidently:**
