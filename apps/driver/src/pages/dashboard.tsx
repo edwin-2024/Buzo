@@ -165,11 +165,16 @@ export function DashboardPage() {
       if (!nextStop || !currentStop) {
         if (currentStop) {
           const finalLocation = {
+            busId: trip.busId,
             latitude: parseFloat(currentStop.latitude),
             longitude: parseFloat(currentStop.longitude),
             heading: 0,
-            speed: 0
+            speed: 0,
+            forcePersist: true,
           };
+          if (socketRef.current?.connected) {
+            socketRef.current.emit("busLocationUpdate", finalLocation);
+          }
           api.patch(`/buses/${trip.busId}/location`, finalLocation).catch(console.error);
         }
         stopSimulation(trip);
@@ -194,14 +199,31 @@ export function DashboardPage() {
       const heading = Math.atan2(lng2 - lng1, lat2 - lat1) * (180 / Math.PI);
 
       const locationData = {
+        busId: trip.busId,
         latitude: currentLat,
         longitude: currentLng,
         heading: heading,
         speed: SPEED_KMH
+      };
+
+      // 1. High-frequency 1Hz stream directly over WebSockets (low latency, 0 DB writes)
+      if (socketRef.current?.connected) {
+        socketRef.current.emit("busLocationUpdate", locationData);
       }
-      
-      // Update DB and emit socket event
-      api.patch(`/buses/${trip.busId}/location`, locationData).catch(console.error)
+
+      // 2. Persist to DB on stop arrival (step === 0) or fallback to periodic HTTP if WebSocket is offline
+      const isStopArrival = step === 0;
+      const isSocketOffline = !socketRef.current?.connected;
+
+      if (isStopArrival || (isSocketOffline && step % 30 === 0)) {
+        api.patch(`/buses/${trip.busId}/location`, {
+          latitude: currentLat,
+          longitude: currentLng,
+          heading,
+          speed: SPEED_KMH,
+          forcePersist: isStopArrival,
+        }).catch(console.error);
+      }
 
       step++;
       

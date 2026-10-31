@@ -48,14 +48,70 @@ export class TripRepository {
         });
     }
 
+    private createStopRelationFilter(stopName: string): Prisma.TripWhereInput {
+        return {
+            route: {
+                stops: {
+                    some: {
+                        stop: {
+                            name: {
+                                contains: stopName.trim(),
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                },
+            },
+        };
+    }
+
+    buildSearchWhere(
+        origin?: string,
+        destination?: string,
+        date?: string
+    ): Prisma.TripWhereInput {
+        const whereClause: Prisma.TripWhereInput = {};
+
+        if (date) {
+            const dateStr = date.includes("T") ? date.split("T")[0] : date;
+            const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
+            const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
+            if (!isNaN(startOfDay.getTime()) && !isNaN(endOfDay.getTime())) {
+                whereClause.departureTime = {
+                    gte: startOfDay,
+                    lte: endOfDay,
+                };
+            }
+        }
+
+        const andConditions: Prisma.TripWhereInput[] = [];
+
+        if (origin && origin.trim()) {
+            andConditions.push(this.createStopRelationFilter(origin));
+        }
+
+        if (destination && destination.trim()) {
+            andConditions.push(this.createStopRelationFilter(destination));
+        }
+
+        if (andConditions.length > 0) {
+            whereClause.AND = andConditions;
+        }
+
+        return whereClause;
+    }
+
     async searchTrips(
-        origin: string,
-        destination: string
+        origin?: string,
+        destination?: string,
+        date?: string
     ) {
+        const where = this.buildSearchWhere(origin, destination, date);
+
         return prisma.trip.findMany({
+            where,
             include: {
                 bus: true,
-
                 route: {
                     include: {
                         stops: {
@@ -69,7 +125,6 @@ export class TripRepository {
                     },
                 },
             },
-
             orderBy: {
                 departureTime: "asc",
             },

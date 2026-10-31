@@ -8,6 +8,7 @@ import type {
     UpdateTripInput,
 } from "../validation/trip.schema";
 import { seatRepository } from "../repositories/seat.repository";
+import { stopRepository } from "../repositories/stop.repository";
 
 export class TripService {
     async findAll() {
@@ -111,14 +112,12 @@ export class TripService {
         return undefined;
     }
 
-    private isSimilar(a: string, b: string): boolean {
-        a = a.toLowerCase().replace(/[^a-z0-9]/g, '');
-        b = b.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (a.includes(b) || b.includes(a)) return true;
-        
-        // Simple Levenshtein distance
+    private levenshteinDistance(a: string, b: string): number {
         const aLen = a.length;
         const bLen = b.length;
+        if (aLen === 0) return bLen;
+        if (bLen === 0) return aLen;
+
         const matrix: number[][] = Array.from({ length: aLen + 1 }, () => Array(bLen + 1).fill(0));
         for (let i = 0; i <= aLen; i++) {
             const row = matrix[i];
@@ -137,16 +136,48 @@ export class TripService {
                     row[j] = prevRow[j - 1] ?? 0;
                 } else {
                     row[j] = Math.min(
-                        prevRow[j - 1] ?? 0, // substitution
-                        row[j - 1] ?? 0,     // insertion
-                        prevRow[j] ?? 0      // deletion
+                        prevRow[j - 1] ?? 0,
+                        row[j - 1] ?? 0,
+                        prevRow[j] ?? 0
                     ) + 1;
                 }
             }
         }
-        
-        // Allow up to 3 typos
-        return (matrix[aLen]?.[bLen] ?? 99) <= 3;
+        return matrix[aLen]?.[bLen] ?? 99;
+    }
+
+    private cleanStopName(name: string): string {
+        return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    private findClosestStopName(query: string, candidateNames: string[]): string | null {
+        const cleanQuery = this.cleanStopName(query);
+        if (!cleanQuery) return null;
+
+        let bestMatch: string | null = null;
+        let lowestDistance = 999;
+
+        for (const name of candidateNames) {
+            const cleanName = this.cleanStopName(name);
+            if (cleanName === cleanQuery || cleanName.includes(cleanQuery) || cleanQuery.includes(cleanName)) {
+                return name;
+            }
+
+            const dist = this.levenshteinDistance(cleanQuery, cleanName);
+            if (dist <= 3 && dist < lowestDistance) {
+                lowestDistance = dist;
+                bestMatch = name;
+            }
+        }
+
+        return bestMatch;
+    }
+
+    isSimilar(a: string, b: string): boolean {
+        const cleanA = this.cleanStopName(a);
+        const cleanB = this.cleanStopName(b);
+        if (cleanA.includes(cleanB) || cleanB.includes(cleanA)) return true;
+        return this.levenshteinDistance(cleanA, cleanB) <= 3;
     }
 
     async searchTrips(
@@ -158,38 +189,66 @@ export class TripService {
             return [];
         }
 
-        const trips = await tripRepository.searchTrips(
-            origin,
-            destination
-        );
-
-        // Normalize date once
         const normalizedDate = date ? this.normalizeDate(date) : undefined;
 
-        return trips.filter((trip) => {
-            // Check route match using fuzzy search
-            const originIndex = trip.route.stops.findIndex(
-                (s) => this.isSimilar(s.stop.name, origin)
-            );
+        // Step 1: Indexed, relation-filtered query pushed to PostgreSQL
+        let candidateTrips = await tripRepository.searchTrips(
+            origin,
+            destination,
+            normalizedDate
+        );
 
-            const destinationIndex = trip.route.stops.findIndex(
-                (s) => this.isSimilar(s.stop.name, destination)
-            );
+        const filterStopOrder = (trips: typeof candidateTrips, orig: string, dest: string) => {
+            const cleanOrig = this.cleanStopName(orig);
+            const cleanDest = this.cleanStopName(dest);
 
-            if (originIndex === -1 || destinationIndex === -1 || originIndex >= destinationIndex) {
-                return false;
-            }
-            
-            // Check date match if provided
-            if (normalizedDate) {
-                const tripDate = trip.departureTime.toISOString().split('T')[0];
-                if (tripDate !== normalizedDate) {
+            return trips.filter((trip) => {
+                const originIndex = trip.route.stops.findIndex((s) => {
+                    const stopName = this.cleanStopName(s.stop.name);
+                    return stopName.includes(cleanOrig) || cleanOrig.includes(stopName);
+                });
+
+                const destinationIndex = trip.route.stops.findIndex((s) => {
+                    const stopName = this.cleanStopName(s.stop.name);
+                    return stopName.includes(cleanDest) || cleanDest.includes(stopName);
+                });
+
+                if (originIndex === -1 || destinationIndex === -1 || originIndex >= destinationIndex) {
                     return false;
                 }
-            }
-            
-            return true;
-        });
+
+                if (normalizedDate) {
+                    const tripDate = trip.departureTime.toISOString().split('T')[0];
+                    if (tripDate !== normalizedDate) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        };
+
+        let matches = filterStopOrder(candidateTrips, origin, destination);
+        if (matches.length > 0) {
+            return matches;
+        }
+
+        // Step 2: Typo-tolerant fallback - resolve closest stop names from Stop table instead of scanning trips
+        const allStops = await stopRepository.findAll();
+        const candidateNames = allStops.map((s) => s.name);
+        const resolvedOrigin = this.findClosestStopName(origin, candidateNames) || origin;
+        const resolvedDest = this.findClosestStopName(destination, candidateNames) || destination;
+
+        if (resolvedOrigin !== origin || resolvedDest !== destination) {
+            candidateTrips = await tripRepository.searchTrips(
+                resolvedOrigin,
+                resolvedDest,
+                normalizedDate
+            );
+            matches = filterStopOrder(candidateTrips, resolvedOrigin, resolvedDest);
+        }
+
+        return matches;
     }
 
     async delete(id: string) {
