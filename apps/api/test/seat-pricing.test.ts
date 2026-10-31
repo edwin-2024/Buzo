@@ -1,7 +1,8 @@
-import { describe, it, expect, spyOn } from "bun:test";
+import { describe, it, expect, spyOn, beforeEach, afterEach } from "bun:test";
 import { getSeatTier } from "../src/lib/seat-pricing";
 import { seatController } from "../src/controllers/seat.controller";
 import { seatRepository } from "../src/repositories/seat.repository";
+import { bookingService } from "../src/services/booking.service";
 
 describe("Seat Pricing Tiers (Job: 006-seat-pricing-tiers)", () => {
   describe("getSeatTier unit logic", () => {
@@ -55,6 +56,21 @@ describe("Seat Pricing Tiers (Job: 006-seat-pricing-tiers)", () => {
   });
 
   describe("SeatController.getByTrip enrichment", () => {
+    let cleanupSpy: any;
+
+    beforeEach(() => {
+      cleanupSpy = spyOn(bookingService, "cleanupExpiredReservations").mockResolvedValue({
+        releasedCount: 0,
+        seatIds: [],
+        tripIds: [],
+        tripSeatMap: [],
+      } as any);
+    });
+
+    afterEach(() => {
+      cleanupSpy?.mockRestore();
+    });
+
     it("should enrich repository seats with tier, tierName, price, and perks", async () => {
       const mockSeats = [
         { id: "s-1", tripId: "trip-test-1", seatNumber: 1, status: "AVAILABLE" as const },

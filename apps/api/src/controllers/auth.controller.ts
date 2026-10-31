@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 
 import { authService } from "../services/auth.service";
+import { tokenRevocationService } from "../services/token-revocation.service";
 import {
     signupSchema,
     loginSchema,
@@ -34,6 +35,25 @@ export class AuthController {
             const result = await authService.login(input);
 
             res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    logout = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) => {
+        try {
+            const token = req.token;
+            if (token) {
+                tokenRevocationService.revokeToken(token, req.user);
+            }
+
+            res.status(200).json({
+                message: "Logged out successfully. Token revoked.",
+            });
         } catch (error) {
             next(error);
         }
