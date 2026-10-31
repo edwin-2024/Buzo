@@ -211,13 +211,11 @@ export function DashboardPage() {
         socketRef.current.emit("busLocationUpdate", locationData);
       }
 
-      // 2. Throttle database persistence to every 30 seconds or on stop arrival (step === 0),
-      // with graceful HTTP fallback if WebSocket is offline
+      // 2. Persist to DB on stop arrival (step === 0) or fallback to periodic HTTP if WebSocket is offline
       const isStopArrival = step === 0;
-      const isPeriodic30s = step % 30 === 0;
       const isSocketOffline = !socketRef.current?.connected;
 
-      if (isStopArrival || isPeriodic30s || isSocketOffline) {
+      if (isStopArrival || (isSocketOffline && step % 30 === 0)) {
         api.patch(`/buses/${trip.busId}/location`, {
           latitude: currentLat,
           longitude: currentLng,

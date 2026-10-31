@@ -48,6 +48,23 @@ export class TripRepository {
         });
     }
 
+    private createStopRelationFilter(stopName: string): Prisma.TripWhereInput {
+        return {
+            route: {
+                stops: {
+                    some: {
+                        stop: {
+                            name: {
+                                contains: stopName.trim(),
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                },
+            },
+        };
+    }
+
     buildSearchWhere(
         origin?: string,
         destination?: string,
@@ -70,37 +87,11 @@ export class TripRepository {
         const andConditions: Prisma.TripWhereInput[] = [];
 
         if (origin && origin.trim()) {
-            andConditions.push({
-                route: {
-                    stops: {
-                        some: {
-                            stop: {
-                                name: {
-                                    contains: origin.trim(),
-                                    mode: "insensitive",
-                                },
-                            },
-                        },
-                    },
-                },
-            });
+            andConditions.push(this.createStopRelationFilter(origin));
         }
 
         if (destination && destination.trim()) {
-            andConditions.push({
-                route: {
-                    stops: {
-                        some: {
-                            stop: {
-                                name: {
-                                    contains: destination.trim(),
-                                    mode: "insensitive",
-                                },
-                            },
-                        },
-                    },
-                },
-            });
+            andConditions.push(this.createStopRelationFilter(destination));
         }
 
         if (andConditions.length > 0) {

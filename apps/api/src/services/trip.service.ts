@@ -146,15 +146,19 @@ export class TripService {
         return matrix[aLen]?.[bLen] ?? 99;
     }
 
+    private cleanStopName(name: string): string {
+        return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
     private findClosestStopName(query: string, candidateNames: string[]): string | null {
-        const cleanQuery = query.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanQuery = this.cleanStopName(query);
         if (!cleanQuery) return null;
 
         let bestMatch: string | null = null;
         let lowestDistance = 999;
 
         for (const name of candidateNames) {
-            const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const cleanName = this.cleanStopName(name);
             if (cleanName === cleanQuery || cleanName.includes(cleanQuery) || cleanQuery.includes(cleanName)) {
                 return name;
             }
@@ -170,10 +174,10 @@ export class TripService {
     }
 
     isSimilar(a: string, b: string): boolean {
-        a = a.toLowerCase().replace(/[^a-z0-9]/g, '');
-        b = b.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (a.includes(b) || b.includes(a)) return true;
-        return this.levenshteinDistance(a, b) <= 3;
+        const cleanA = this.cleanStopName(a);
+        const cleanB = this.cleanStopName(b);
+        if (cleanA.includes(cleanB) || cleanB.includes(cleanA)) return true;
+        return this.levenshteinDistance(cleanA, cleanB) <= 3;
     }
 
     async searchTrips(
@@ -195,17 +199,17 @@ export class TripService {
         );
 
         const filterStopOrder = (trips: typeof candidateTrips, orig: string, dest: string) => {
-            const cleanOrig = orig.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const cleanDest = dest.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const cleanOrig = this.cleanStopName(orig);
+            const cleanDest = this.cleanStopName(dest);
 
             return trips.filter((trip) => {
                 const originIndex = trip.route.stops.findIndex((s) => {
-                    const stopName = s.stop.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const stopName = this.cleanStopName(s.stop.name);
                     return stopName.includes(cleanOrig) || cleanOrig.includes(stopName);
                 });
 
                 const destinationIndex = trip.route.stops.findIndex((s) => {
-                    const stopName = s.stop.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const stopName = this.cleanStopName(s.stop.name);
                     return stopName.includes(cleanDest) || cleanDest.includes(stopName);
                 });
 

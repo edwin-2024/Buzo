@@ -63,10 +63,15 @@ export function registerBusSocket(io: Server) {
                 return;
             }
 
-            // Driver authorization check: ensure driver is assigned to this bus
+            // Driver authorization check: verify driver assignment (cached in socket session to eliminate 1Hz DB queries)
             if (socket.data?.user && socket.data.user.role === "DRIVER") {
-                const driver = await driverRepository.findByUserId(socket.data.user.userId);
-                if (!driver || driver.assignedBusId !== data.busId) {
+                let assignedBusId = socket.data.assignedBusId;
+                if (assignedBusId === undefined) {
+                    const driver = await driverRepository.findByUserId(socket.data.user.userId);
+                    assignedBusId = driver?.assignedBusId ?? null;
+                    socket.data.assignedBusId = assignedBusId;
+                }
+                if (!assignedBusId || assignedBusId !== data.busId) {
                     return;
                 }
             }

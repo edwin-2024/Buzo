@@ -6,10 +6,24 @@ export interface UpdateLocationOptions {
     forcePersist?: boolean;
 }
 
+export interface BusTelemetryPayload {
+    busId: string;
+    latitude: number;
+    longitude: number;
+    heading: number;
+    speed: number;
+    updatedAt: Date;
+    bus?: {
+        id?: string;
+        number?: string;
+        capacity?: number;
+    };
+}
+
 export class BusLocationService {
     private readonly dbPersistThrottleMs: number;
     private lastDbPersistTime = new Map<string, number>();
-    private latestLocations = new Map<string, any>();
+    private latestLocations = new Map<string, BusTelemetryPayload>();
     private busNumberCache = new Map<string, { number: string; cachedAt: number }>();
     private static readonly BUS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -40,17 +54,20 @@ export class BusLocationService {
         heading: number,
         speed: number,
         options?: UpdateLocationOptions
-    ) {
+    ): Promise<BusTelemetryPayload> {
         const busNumber = await this.getBusNumber(busId);
         const now = Date.now();
 
-        const locationPayload = {
+        const locationPayload: BusTelemetryPayload = {
             busId,
             latitude,
             longitude,
             heading,
             speed,
             updatedAt: new Date(now),
+            bus: {
+                number: busNumber,
+            },
         };
 
         this.latestLocations.set(busId, locationPayload);
@@ -85,7 +102,7 @@ export class BusLocationService {
                 speed
             );
             this.lastDbPersistTime.set(busId, now);
-            return persisted;
+            return persisted as BusTelemetryPayload;
         }
 
         return locationPayload;
@@ -106,7 +123,8 @@ export class BusLocationService {
             merged.set(loc.busId, loc);
         }
         for (const [busId, loc] of this.latestLocations.entries()) {
-            merged.set(busId, loc);
+            const existing = merged.get(busId);
+            merged.set(busId, { ...existing, ...loc });
         }
         return Array.from(merged.values());
     }

@@ -5,6 +5,7 @@ import { env } from "@buzo/env";
 import { initializeSocket } from "./realtime/socket";
 import { bookingService } from "./services/booking.service";
 import { tokenRevocationService } from "./services/token-revocation.service";
+import { busLocationService } from "./services/bus-location.service";
 import { RESERVATION_SWEEPER_INTERVAL_MS } from "./config/reservation.config";
 
 const server = http.createServer(app);
@@ -34,6 +35,20 @@ export const tokenCleanupTimer = setInterval(() => {
         console.error("Token revocation cleanup error:", err);
     }
 }, TOKEN_CLEANUP_INTERVAL_MS);
+
+export const gracefulShutdown = async () => {
+    clearInterval(expirySweeperTimer);
+    clearInterval(tokenCleanupTimer);
+    try {
+        await busLocationService.flushPendingLocations();
+    } catch (err) {
+        console.error("Error flushing locations on shutdown:", err);
+    }
+    server.close();
+};
+
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
 
 server.listen(env.PORT, () => {
     console.log(`🚀 Server running on ${env.PORT}`);
