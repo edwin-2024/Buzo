@@ -14,8 +14,17 @@ export class TripController {
         next: NextFunction
     ) => {
         try {
-            const trips = await tripService.findAll();
+            const { origin, destination, date } = req.query;
+            if (origin && destination) {
+                const trips = await tripService.searchTrips(
+                    String(origin),
+                    String(destination),
+                    date ? String(date) : undefined
+                );
+                return res.status(200).json(trips);
+            }
 
+            const trips = await tripService.findAll();
             res.status(200).json(trips);
         } catch (error) {
             next(error);

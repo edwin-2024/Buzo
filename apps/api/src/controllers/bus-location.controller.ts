@@ -34,7 +34,8 @@ export class BusLocationController {
                     input.latitude,
                     input.longitude,
                     input.heading,
-                    input.speed
+                    input.speed,
+                    { forcePersist: input.forcePersist }
                 );
 
             res.json(location);

@@ -7,6 +7,8 @@ export const updateBusLocationSchema = z.object({
     heading: z.number(),
 
     speed: z.number().min(0),
+
+    forcePersist: z.boolean().optional(),
 });
 
 export type UpdateBusLocationInput =

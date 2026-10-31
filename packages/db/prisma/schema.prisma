@@ -110,6 +110,7 @@ model RouteStop {
   stop  Stop  @relation(fields: [stopId], references: [id])
 
   @@id([routeId, stopId])
+  @@index([stopId])
 }
 
 model Trip {
@@ -131,6 +132,10 @@ model Trip {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([departureTime, status])
+  @@index([routeId])
+  @@index([busId])
 }
 
 model Seat {
@@ -165,6 +170,10 @@ model Booking {
   seat      Seat @relation(fields: [seatId], references: [id])
 
   createdAt DateTime @default(now())
+
+  @@index([paymentStatus, createdAt])
+  @@index([tripId])
+  @@index([passengerId])
 }
 
 model BusLocation {

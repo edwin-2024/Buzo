@@ -1,4 +1,6 @@
 import { Server, Socket } from "socket.io";
+import { busLocationService } from "../services/bus-location.service";
+import { driverRepository } from "../repositories/driver.repository";
 
 export interface BusDelayEvent {
     busId: string;
@@ -44,7 +46,7 @@ export function registerBusSocket(io: Server) {
             }
         });
 
-        socket.on("busLocationUpdate", (data: any) => {
+        socket.on("busLocationUpdate", async (data: any) => {
             // Guard: Passengers cannot broadcast bus telemetry
             if (socket.data?.user && socket.data.user.role === "PASSENGER") {
                 return;
@@ -61,14 +63,29 @@ export function registerBusSocket(io: Server) {
                 return;
             }
 
-            // Broadcast to global fleet radar and bus subscribers
-            io.emit("bus-location-update", {
-                busId: data.busId,
-                location: {
-                    lat: data.latitude,
-                    lng: data.longitude
+            // Driver authorization check: ensure driver is assigned to this bus
+            if (socket.data?.user && socket.data.user.role === "DRIVER") {
+                const driver = await driverRepository.findByUserId(socket.data.user.userId);
+                if (!driver || driver.assignedBusId !== data.busId) {
+                    return;
                 }
-            });
+            }
+
+            const heading = typeof data.heading === "number" ? data.heading : 0;
+            const speed = typeof data.speed === "number" ? data.speed : 0;
+
+            try {
+                await busLocationService.updateLocation(
+                    data.busId,
+                    data.latitude,
+                    data.longitude,
+                    heading,
+                    speed,
+                    { forcePersist: Boolean(data.forcePersist) }
+                );
+            } catch (err) {
+                console.error("Error updating bus location via socket:", err);
+            }
         });
 
         socket.on("bus:delay", (data: { busId: string; tripId?: string; delayMinutes: number; reason?: string }) => {
