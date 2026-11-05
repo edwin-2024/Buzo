@@ -1,4 +1,7 @@
 // Preload mock test environment variables for local & CI test execution
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = "test";
+}
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL =
     "postgresql://mock:mock@localhost:5432/buzo_test?sslmode=disable";

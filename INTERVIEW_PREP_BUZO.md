@@ -39,6 +39,7 @@
     - **Atomic Conditional Mutation:** `tx.seat.updateMany({ where: { id: { in: seatIds }, status: SeatStatus.AVAILABLE }, data: { status: SeatStatus.BOOKED } })`.
     - **Row Count Invariant Check:** `if (updateResult.count !== seatIds.length) throw new Error("One or more selected seats are no longer available")`.
     - **Database-Level Unique Constraints:** [`schema.prisma`](file:///d:/projects/Buzo/packages/db/prisma/schema.prisma#L149-L159) defines `seatId String @unique` on `Booking` and `@@unique([tripId, seatNumber])` on `Seat`.
+    - **Automated Concurrency & Anti-Double Booking Proof:** [`concurrent-booking.test.ts`](file:///d:/projects/Buzo/apps/api/test/concurrent-booking.test.ts) runs parallel simultaneous reservations against the identical seat, demonstrating that the winner receives HTTP 201 Created while the competing request is cleanly rejected with HTTP 409 Conflict, alongside a controlled comparison proving double-allocation occurs without the guard.
 - **Nuance / Honest Distinction:**
   The workspace has a placeholder package [`packages/validators`](file:///d:/projects/Buzo/packages/validators/index.ts) initialized via Bun, but all active runtime Zod schemas are centrally organized within [`apps/api/src/validation/`](file:///d:/projects/Buzo/apps/api/src/validation/). Mention this transparently: *"I centralized the HTTP schema validations inside `apps/api/src/validation` for direct co-location with API controllers, while `packages/env` handles shared config validation."*
 
