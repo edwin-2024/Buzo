@@ -17,8 +17,8 @@ describe("Performance & Scaling Optimization Suite", () => {
 
             // Check date filter boundary
             expect(where.departureTime).toBeDefined();
-            expect(where.departureTime?.gte).toEqual(new Date("2026-11-15T00:00:00.000Z"));
-            expect(where.departureTime?.lte).toEqual(new Date("2026-11-15T23:59:59.999Z"));
+            expect((where.departureTime as any)?.gte).toEqual(new Date("2026-11-15T00:00:00.000Z"));
+            expect((where.departureTime as any)?.lte).toEqual(new Date("2026-11-15T23:59:59.999Z"));
 
             // Check stop relation pushdown
             expect(where.AND).toBeDefined();
@@ -242,8 +242,8 @@ describe("Performance & Scaling Optimization Suite", () => {
 
             const location = await busLocationService.getLocation("bus-mem-1");
             expect(location).toBeDefined();
-            expect(location.latitude).toBe(13.0827);
-            expect(location.longitude).toBe(80.2707);
+            expect(location?.latitude).toBe(13.0827);
+            expect(location?.longitude).toBe(80.2707);
 
             // Verified: DB was not queried for this live coordinate
             expect(dbFindSpy).toHaveBeenCalledTimes(0);

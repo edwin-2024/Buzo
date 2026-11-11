@@ -16,6 +16,7 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "factory:dashboard": "bun run factory/server.ts"
   },
   "workspaces": [

@@ -9,13 +9,16 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^26.0.1"
+    "@types/node": "^26.0.1",
+    "socket.io-client": "^4.8.3"
   },
   "peerDependencies": {
     "typescript": "^6.0.3"
   },
   "scripts": {
-    "dev": "bun --watch src/server.ts"
+    "dev": "bun --watch src/server.ts",
+    "check-types": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@buzo/chatbot": "workspace:*",
