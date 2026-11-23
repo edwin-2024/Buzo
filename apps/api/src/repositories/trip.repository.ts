@@ -48,14 +48,29 @@ export class TripRepository {
         });
     }
 
-    private createStopRelationFilter(stopName: string): Prisma.TripWhereInput {
+    private createStopRelationFilter(stopIdentifier: string): Prisma.TripWhereInput {
+        const trimmed = stopIdentifier.trim();
+        // If the identifier is a CUID (starts with 'c', length >= 20, no spaces), filter by stopId directly
+        const isCuid = trimmed.startsWith("c") && trimmed.length >= 20 && !trimmed.includes(" ");
+        if (isCuid) {
+            return {
+                route: {
+                    stops: {
+                        some: {
+                            stopId: trimmed,
+                        },
+                    },
+                },
+            };
+        }
+
         return {
             route: {
                 stops: {
                     some: {
                         stop: {
                             name: {
-                                contains: stopName.trim(),
+                                contains: trimmed,
                                 mode: "insensitive",
                             },
                         },

@@ -15,10 +15,10 @@ export class TripController {
     ) => {
         try {
             const { origin, destination, date } = req.query;
-            if (origin && destination) {
+            if (origin || destination || date) {
                 const trips = await tripService.searchTrips(
-                    String(origin),
-                    String(destination),
+                    origin ? String(origin) : undefined,
+                    destination ? String(destination) : undefined,
                     date ? String(date) : undefined
                 );
                 return res.status(200).json(trips);

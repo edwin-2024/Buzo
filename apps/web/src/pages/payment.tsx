@@ -90,7 +90,7 @@ export function PaymentPage() {
       queryClient.invalidateQueries({ queryKey: ["seats", tripId] })
       toast.success("Reservation cancelled. Seats released.")
       navigate(`/booking/${tripId}`)
-    } catch (err) {
+    } catch {
       toast.error("Failed to cancel reservation")
     } finally {
       setIsCancelling(false)

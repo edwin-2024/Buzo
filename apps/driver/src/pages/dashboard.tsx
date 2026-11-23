@@ -35,9 +35,13 @@ export function DashboardPage() {
   const [isOnBreak, setIsOnBreak] = useState(false)
   const [currentStopIndex, setCurrentStopIndex] = useState(0)
   const [activeDelay, setActiveDelay] = useState<{ minutes: number; reason: string } | null>(null)
+  const [telemetryMode, setTelemetryMode] = useState<"SIMULATION" | "REAL_GPS">("SIMULATION")
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null)
   
-  // Ref for the simulation interval and break state
+  // Ref for the simulation interval, GPS watch, wake lock, and break state
   const simulationRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const watchPositionIdRef = useRef<number | null>(null)
+  const wakeLockRef = useRef<any | null>(null)
   const isOnBreakRef = useRef(false)
   const socketRef = useRef<Socket | null>(null)
 
@@ -50,14 +54,21 @@ export function DashboardPage() {
   })
 
   useEffect(() => {
-    // Setup socket connection for live updates
-    socketRef.current = io("http://localhost:3000", {
+    // Setup socket connection for live updates using environment URL or local fallback
+    const socketUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+    socketRef.current = io(socketUrl, {
       auth: { token }
     });
     
     return () => {
       if (socketRef.current) socketRef.current.disconnect()
       if (simulationRef.current) clearInterval(simulationRef.current)
+      if (watchPositionIdRef.current !== null && "geolocation" in navigator) {
+        navigator.geolocation.clearWatch(watchPositionIdRef.current);
+      }
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+      }
     }
   }, [token])
 
@@ -113,6 +124,48 @@ export function DashboardPage() {
     
     // Announce departure via API to update trip status
     api.patch(`/trips/${trip.id}`, { status: "IN_PROGRESS" }).catch(console.error);
+
+    // Request wake lock so device display stays on during transit
+    if ("wakeLock" in navigator) {
+      (navigator as any).wakeLock?.request("screen").then((lock: any) => {
+        wakeLockRef.current = lock;
+      }).catch(() => {});
+    }
+
+    if (telemetryMode === "REAL_GPS" && "geolocation" in navigator) {
+      watchPositionIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (isOnBreakRef.current) return;
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const heading = pos.coords.heading ?? 0;
+          const speedKmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? Math.round(pos.coords.speed * 3.6) : 45;
+          setGpsAccuracy(Math.round(pos.coords.accuracy));
+
+          const locationData = {
+            busId: trip.busId,
+            latitude: lat,
+            longitude: lng,
+            heading: isNaN(heading) ? 0 : heading,
+            speed: speedKmh,
+          };
+
+          if (socketRef.current?.connected) {
+            socketRef.current.emit("busLocationUpdate", locationData);
+          }
+
+          api.patch(`/buses/${trip.busId}/location`, {
+            ...locationData,
+            forcePersist: false,
+          }).catch(console.error);
+        },
+        (err) => {
+          console.warn("Geolocation watchPosition warning:", err.message);
+        },
+        { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+      );
+      return;
+    }
 
     // Filter out stops with invalid coordinates to prevent NaN crashes
     const validStops = [...trip.route.stops]
@@ -246,6 +299,15 @@ export function DashboardPage() {
       clearInterval(simulationRef.current);
       simulationRef.current = null;
     }
+    if (watchPositionIdRef.current !== null && "geolocation" in navigator) {
+      navigator.geolocation.clearWatch(watchPositionIdRef.current);
+      watchPositionIdRef.current = null;
+    }
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+    setGpsAccuracy(null)
     if (isOnBreakRef.current && socketRef.current && trip) {
       socketRef.current.emit("bus:break", {
         busId: trip.busId,
@@ -295,10 +357,46 @@ export function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
+            {/* Telemetry Mode Selector */}
+            <div className="flex items-center gap-1 bg-secondary/80 p-1 rounded-xl border border-border/60 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => !isSimulating && setTelemetryMode("SIMULATION")}
+                disabled={isSimulating}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  telemetryMode === "SIMULATION"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                } ${isSimulating ? "opacity-75 cursor-not-allowed" : ""}`}
+                title="Simulate route progress along waypoints"
+              >
+                🕹️ Simulation
+              </button>
+              <button
+                type="button"
+                onClick={() => !isSimulating && setTelemetryMode("REAL_GPS")}
+                disabled={isSimulating}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  telemetryMode === "REAL_GPS"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                } ${isSimulating ? "opacity-75 cursor-not-allowed" : ""}`}
+                title="Use device hardware GPS (watchPosition)"
+              >
+                📡 Device GPS
+              </button>
+            </div>
+
             {/* Live Telemetry Ping */}
             <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
               <Radio className="w-3 h-3 animate-pulse" />
-              <span>Telemetry Connected</span>
+              <span>
+                {telemetryMode === "REAL_GPS"
+                  ? gpsAccuracy !== null
+                    ? `Live GPS (±${gpsAccuracy}m)`
+                    : "Live GPS Ready"
+                  : "Telemetry Connected"}
+              </span>
             </div>
 
             {/* Portal Jumps */}
@@ -678,7 +776,10 @@ export function DashboardPage() {
                             onClick={() => startSimulation(trip)}
                             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold text-xs transition-all duration-150 active:scale-[0.98] shadow-sm cursor-pointer"
                           >
-                            <Play className="h-3.5 w-3.5 fill-primary-foreground" /> Start Cockpit Simulation
+                            <Play className="h-3.5 w-3.5 fill-primary-foreground" />{" "}
+                            {telemetryMode === "REAL_GPS"
+                              ? "Start Live GPS Trip"
+                              : "Start Cockpit Simulation"}
                           </button>
                         ) : isActive ? (
                           <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-center text-xs font-bold text-primary">
