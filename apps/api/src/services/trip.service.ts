@@ -185,8 +185,8 @@ export class TripService {
         destination?: string,
         date?: string
     ) {
-        if (!origin || !destination) {
-            return [];
+        if (!origin && !destination && !date) {
+            return this.findAll();
         }
 
         const normalizedDate = date ? this.normalizeDate(date) : undefined;
@@ -198,22 +198,33 @@ export class TripService {
             normalizedDate
         );
 
-        const filterStopOrder = (trips: typeof candidateTrips, orig: string, dest: string) => {
-            const cleanOrig = this.cleanStopName(orig);
-            const cleanDest = this.cleanStopName(dest);
+        const filterStopOrder = (trips: typeof candidateTrips, orig?: string, dest?: string) => {
+            const cleanOrig = orig ? this.cleanStopName(orig) : "";
+            const cleanDest = dest ? this.cleanStopName(dest) : "";
 
             return trips.filter((trip) => {
-                const originIndex = trip.route.stops.findIndex((s) => {
-                    const stopName = this.cleanStopName(s.stop.name);
-                    return stopName.includes(cleanOrig) || cleanOrig.includes(stopName);
-                });
+                let originIndex = -1;
+                let destinationIndex = -1;
 
-                const destinationIndex = trip.route.stops.findIndex((s) => {
-                    const stopName = this.cleanStopName(s.stop.name);
-                    return stopName.includes(cleanDest) || cleanDest.includes(stopName);
-                });
+                if (orig) {
+                    originIndex = trip.route.stops.findIndex((s) => {
+                        if (s.stopId === orig || s.stop.id === orig) return true;
+                        const stopName = this.cleanStopName(s.stop.name);
+                        return stopName.includes(cleanOrig) || cleanOrig.includes(stopName);
+                    });
+                    if (originIndex === -1) return false;
+                }
 
-                if (originIndex === -1 || destinationIndex === -1 || originIndex >= destinationIndex) {
+                if (dest) {
+                    destinationIndex = trip.route.stops.findIndex((s) => {
+                        if (s.stopId === dest || s.stop.id === dest) return true;
+                        const stopName = this.cleanStopName(s.stop.name);
+                        return stopName.includes(cleanDest) || cleanDest.includes(stopName);
+                    });
+                    if (destinationIndex === -1) return false;
+                }
+
+                if (orig && dest && originIndex >= destinationIndex) {
                     return false;
                 }
 
@@ -229,15 +240,15 @@ export class TripService {
         };
 
         let matches = filterStopOrder(candidateTrips, origin, destination);
-        if (matches.length > 0) {
+        if (matches.length > 0 || (!origin && !destination)) {
             return matches;
         }
 
         // Step 2: Typo-tolerant fallback - resolve closest stop names from Stop table instead of scanning trips
         const allStops = await stopRepository.findAll();
         const candidateNames = allStops.map((s) => s.name);
-        const resolvedOrigin = this.findClosestStopName(origin, candidateNames) || origin;
-        const resolvedDest = this.findClosestStopName(destination, candidateNames) || destination;
+        const resolvedOrigin = origin ? (this.findClosestStopName(origin, candidateNames) || origin) : undefined;
+        const resolvedDest = destination ? (this.findClosestStopName(destination, candidateNames) || destination) : undefined;
 
         if (resolvedOrigin !== origin || resolvedDest !== destination) {
             candidateTrips = await tripRepository.searchTrips(

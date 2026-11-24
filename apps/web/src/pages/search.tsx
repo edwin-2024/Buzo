@@ -52,9 +52,14 @@ export function SearchPage() {
   })
 
   const { data: trips, isLoading, isError } = useQuery({
-    queryKey: ["trips"],
+    queryKey: ["trips", source, destination, dateStr],
     queryFn: async () => {
-      const { data } = await api.get("/trips")
+      const params: Record<string, string> = {}
+      if (source) params.origin = source
+      if (destination) params.destination = destination
+      if (dateStr) params.date = dateStr
+
+      const { data } = await api.get("/trips", { params })
       return data as any[]
     },
   })

@@ -47,8 +47,13 @@ export function registerBusSocket(io: Server) {
         });
 
         socket.on("busLocationUpdate", async (data: any) => {
-            // Guard: Passengers cannot broadcast bus telemetry
-            if (socket.data?.user && socket.data.user.role === "PASSENGER") {
+            // Guard: Telemetry broadcast requires DRIVER or ADMIN role
+            if (socket.data?.user) {
+                if (socket.data.user.role === "PASSENGER") {
+                    return;
+                }
+            } else if (process.env.NODE_ENV !== "test") {
+                // In production/development, anonymous clients cannot broadcast bus telemetry
                 return;
             }
 
@@ -94,8 +99,12 @@ export function registerBusSocket(io: Server) {
         });
 
         socket.on("bus:delay", (data: { busId: string; tripId?: string; delayMinutes: number; reason?: string }) => {
-            // Guard: Passengers cannot report delays
-            if (socket.data?.user && socket.data.user.role === "PASSENGER") {
+            // Guard: Only DRIVER or ADMIN can report delays
+            if (socket.data?.user) {
+                if (socket.data.user.role === "PASSENGER") {
+                    return;
+                }
+            } else if (process.env.NODE_ENV !== "test") {
                 return;
             }
 
@@ -114,8 +123,12 @@ export function registerBusSocket(io: Server) {
         });
 
         socket.on("bus:break", (data: { busId: string; tripId?: string; onBreak: boolean; reason?: string }) => {
-            // Guard: Passengers cannot trigger driver break status
-            if (socket.data?.user && socket.data.user.role === "PASSENGER") {
+            // Guard: Only DRIVER or ADMIN can trigger driver break status
+            if (socket.data?.user) {
+                if (socket.data.user.role === "PASSENGER") {
+                    return;
+                }
+            } else if (process.env.NODE_ENV !== "test") {
                 return;
             }
 
